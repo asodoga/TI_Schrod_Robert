@@ -7,17 +7,17 @@ MODULE Basis_m
   PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated
 
   TYPE :: Basis_t
+    integer                         :: nb_basis   = 0
     integer                         :: nb         = 0
     integer                         :: nq         = 0
 
     character (len=:),  allocatable :: Basis_name
-
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
     real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
     real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
-
+   TYPE (Basis_t),    allocatable :: tab_basis(:)
   END TYPE Basis_t
 
 CONTAINS
@@ -27,16 +27,19 @@ CONTAINS
     logical                      :: alloc
 
     alloc =             allocated(Basis%x)
+    alloc = alloc .AND. allocated(Basis%tab_basis)
     alloc = alloc .AND. allocated(Basis%w)
     alloc = alloc .AND. allocated(Basis%d0gb)
     alloc = alloc .AND. allocated(Basis%d1gb)
     alloc = alloc .AND. allocated(Basis%d2gb)
 
   END FUNCTION Basis_IS_allocated
+
   RECURSIVE SUBROUTINE Write_Basis(Basis)
   USE UtilLib_m
 
     TYPE(Basis_t),       intent(in)  :: Basis
+    integer                          :: i
 
     write(out_unitp,*) '-------------------------------------------------'
     write(out_unitp,*) 'Write_Basis'
@@ -55,9 +58,22 @@ CONTAINS
       write(out_unitp,*) ' Basis tables (x, w, dngb) are not allocated.'
     END IF
 
+    write(out_unitp,*)
+    write(out_unitp,*)
+    write(out_unitp,*) 'nb_basis',Basis%nb_basis
+
+    IF (allocated(Basis%tab_basis)) THEN
+
+      DO i=1,size(Basis%tab_basis)
+        CALL Write_Basis(Basis%tab_basis(i))
+      END DO
+    END IF
     write(out_unitp,*) '-------------------------------------------------'
 
   END SUBROUTINE Write_Basis
+  
+  
+ !!!!! la modification de Robert!!!!!!!!!!
   RECURSIVE SUBROUTINE Read_Basis(Basis,nio)
     USE UtilLib_m
 
@@ -68,14 +84,12 @@ CONTAINS
 
     integer                         :: err_io
 
-    integer                         :: nb,nq,i,j
+    integer                         :: nb,nq,i,j,nb_basis
     character (len=Name_len)        :: name
-    real(kind=Rk)                   :: A,B,scaleQ,Q0
+    real(kind=Rk)                   :: A,B,scaleQ,Q0,d0,d2,X1,W1
 
-
-    NAMELIST /basis_nD/ name,nb,nq,A,B,scaleQ,Q0
-
-
+    NAMELIST /basis_nD/ name,nb_basis,nb,nq,A,B,scaleQ,Q0
+    nb_basis  = 0
     nb        = 0
     nq        = 0
     A         = ZERO
@@ -104,29 +118,47 @@ CONTAINS
       STOP ' ERROR in Read_Basis: problems with the namelist.'
     END IF
 
-    Basis%nb        = nb
-    Basis%nq        = nq
-    Basis%Basis_name      = trim(adjustl(name))
-    CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+    IF (nb_basis > 1) THEN
+      Basis%Basis_name     = 'Dp'
+      CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+
+      allocate(Basis%tab_basis(nb_basis))
+      DO i=1,nb_basis
+        CALL Read_Basis(Basis%tab_basis(i),nio)
+      END DO
+      Basis%nb = product(Basis%tab_basis(:)%nb)
+      Basis%nq = product(Basis%tab_basis(:)%nq)
+    ELSE
+      Basis%nb_basis  = nb_basis
+      Basis%nb        = nb
+      Basis%nq        = nq
+      Basis%Basis_name     = trim(adjustl(name))
+       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
     SELECT CASE (Basis%Basis_name)
-    CASE ('boxab')
-     CALL Construct_Basis_Sin(Basis)
+
+     CASE ('boxab')
+      CALL Construct_Basis_Sin(Basis)
+
       Q0      = A
       scaleQ  = pi/(B-A)
-      CASE ('herm','Ho')
-     CALL Construct_Basis_Ho(Basis)
-    CASE default
+
+     CASE ('herm','Ho')
+      CALL Construct_Basis_Ho(Basis)
+     CASE default
       STOP 'ERROR in Read_Basis: no default basis.'
-    END SELECT
+     END SELECT
 
-    CALL Scale_Basis(Basis,Q0,scaleQ)
-    CALL CheckOrtho_Basis(Basis,nderiv=2)
+   IF (.NOT. allocated(Basis%tab_basis)) THEN
+     CALL Scale_Basis(Basis,Q0,scaleQ)
+     CALL CheckOrtho_Basis(Basis,nderiv=2)
+     CALL Write_Basis(Basis)
+   END IF
+   END IF
 
-    CALL Write_Basis(Basis)
+ END SUBROUTINE Read_Basis
 
-  END SUBROUTINE Read_Basis
-  SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
+ SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
   USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
@@ -162,7 +194,7 @@ CONTAINS
   END SUBROUTINE Construct_Basis_Sin
 
 
-!!!!! la modification de Robert!!!!!!!!!!
+
  SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
   USE UtilLib_m
 
@@ -182,66 +214,64 @@ CONTAINS
     allocate(Basis%d2gb(nq,nb,1,1))
 
     DO i = 1, nq
-          DO j = 1, nb
-           CALL Construct_Basis_poly_Hermite_exp(Basis%x(i),Basis%d0gb(i,j), Basis%d1gb(i,j,1),Basis%d2gb(i,j,1,1), j-1,.TRUE.)
-          END DO
-      END DO
+        DO j = 1, nb
+          CALL Construct_Basis_poly_Hermite_exp(Basis%x(i),Basis%d0gb(i,j), Basis%d1gb(i,j,1),Basis%d2gb(i,j,1,1), j-1,.TRUE.)
+        END DO
+    END DO
 
 
-  END SUBROUTINE Construct_Basis_Ho
+END SUBROUTINE Construct_Basis_Ho
 
 FUNCTION poly_Hermite(x,l)
-    Implicit none
+  Implicit none
     real(kind = Rk):: poly_Hermite
     real(kind = Rk):: pl0,pl1,pl2,norme,x
     integer        :: i,l
 
-      IF ( l .LT. 0 ) THEN
-         Write(out_unitp,*) 'Bad arguments in poly_hermite :'
-         Write(out_unitp,*) ' l < 0 : ',l
-         STOP
-        end if
-
+    IF ( l .LT. 0 ) THEN
+       Write(out_unitp,*) 'Bad arguments in poly_hermite :'
+       Write(out_unitp,*) ' l < 0 : ',l
+       STOP
+    END IF
        norme  =  sqrt(PI)
 
-       IF (l .EQ. 0) THEN
-         poly_Hermite = ONE/sqrt(norme)
-       ELSE IF (l .EQ. 1) THEN
-           norme = norme * TWO
-         poly_Hermite = TWO * x/sqrt(norme)
-       ELSE
+    IF (l .EQ. 0) THEN
+       poly_Hermite = ONE/sqrt(norme)
+    ELSE IF (l .EQ. 1) THEN
+       norme = norme * TWO
+       poly_Hermite = TWO * x/sqrt(norme)
+    ELSE
 
-         pl2 = ONE
-         pl1 = TWO * x
-         norme = norme * TWO
+       pl2 = ONE
+       pl1 = TWO * x
+       norme = norme * TWO
 
-         DO i=2,l
-           norme = norme * TWO * i
-           pl0 = TWO*( x*pl1 - (i-1)*pl2 )
-           pl2 = pl1
-           pl1 = pl0
-         END DO
-         poly_Hermite = pl0/sqrt(norme)
-       END IF
+     DO i=2,l
+       norme = norme * TWO * i
+       pl0 = TWO*( x*pl1 - (i-1)*pl2 )
+       pl2 = pl1
+       pl1 = pl0
+     END DO
+       poly_Hermite = pl0/sqrt(norme)
+     END IF
 
-     END FUNCTION poly_Hermite
+END FUNCTION poly_Hermite
 
- FUNCTION gamma_perso(n)
-    Implicit none
-
+FUNCTION gamma_perso(n)
+ Implicit none
     real(kind = Rk)  :: gamma_perso
     real(kind = Rk)  :: a
     integer          :: i,n
        IF (n .LE. 0) THEN
            write(out_unitp,*) 'ERROR: gamma( n<=0)',n
            STOP
-         END IF
+       END IF
          a = ONE
-         DO i = 1,n-1
-           a = a * dble (i)
-      END DO
-      gamma_perso = a
-  END FUNCTION gamma_perso
+       DO i = 1,n-1
+         a = a * dble (i)
+       END DO
+         gamma_perso = a
+END FUNCTION gamma_perso
 
    SUBROUTINE herrec ( p2, dp2, p1, x, nq )
       Implicit none
@@ -362,7 +392,7 @@ SUBROUTINE hercom (nq,xp,w)
  SUBROUTINE Construct_Basis_poly_Hermite_exp(x,d0gb,d1gb,d2gb,l,deriv)
 
 
-      logical        :: deriv
+      logical deriv
 
       integer        :: l
 
@@ -450,6 +480,8 @@ SUBROUTINE hercom (nq,xp,w)
     END IF
 
   END SUBROUTINE CheckOrtho_Basis
+
+
   SUBROUTINE Scale_Basis(Basis,x0,sx)
   USE UtilLib_m
 

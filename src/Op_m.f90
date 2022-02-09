@@ -1,6 +1,5 @@
 module Op_m
   USE NumParameters_m
-  USE diago_m
   USE Basis_m, only : Basis_t
   implicit none
   private
@@ -65,11 +64,11 @@ contains
 
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
-    
-   ! character (len=*) :: VECPRO
+
+
     integer :: ib,iq
 
-    real (kind=Rk), allocatable :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
+    real (kind=Rk), allocatable :: V(:),OpPsi_g(:)
 
     IF (.NOT. Basis_IS_allocated(Basis)) THEN
       STOP 'ERROR in Set_Op: the Basis is not initialized'
@@ -96,24 +95,7 @@ contains
 
 
     CALL write_Op(Op)
-    allocate(EigenVal(Basis%nb))
-    allocate(EigenVec(Basis%nb,Basis%nb))
-    CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
-    
-    Write(out_unitp,*)
-    Write(out_unitp,*)
-     Write(out_unitp,*) 'eigenvalues = '
-     do ib=1,Basis%nb
-        write(out_unitp,*) EigenVal(ib)
-     end do
-    Write(out_unitp,*)
-    Write(out_unitp,*)
-    
-    do ib=1,Basis%nb
-        write(*,*) (EigenVec(ib,iq),iq=1,Basis%nb)
-     end do
-    
-    !CALL Write_RMat(EigenVec,out_unitp,5,name_info='Op%RMat')
+
 
   END SUBROUTINE Set_Op
 
