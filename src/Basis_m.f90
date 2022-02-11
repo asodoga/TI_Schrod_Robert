@@ -17,21 +17,27 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
     real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
-   TYPE (Basis_t),    allocatable :: tab_basis(:)
+   TYPE (Basis_t),   allocatable :: tab_basis(:)
   END TYPE Basis_t
 
 CONTAINS
-  FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
+RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     TYPE(Basis_t),   intent(in)  :: Basis
     logical                      :: alloc
-
-    alloc =             allocated(Basis%x)
-    alloc = alloc .AND. allocated(Basis%tab_basis)
-    alloc = alloc .AND. allocated(Basis%w)
-    alloc = alloc .AND. allocated(Basis%d0gb)
-    alloc = alloc .AND. allocated(Basis%d1gb)
-    alloc = alloc .AND. allocated(Basis%d2gb)
+    integer                      :: i,nb_basis
+      IF ( allocated(Basis%tab_basis)) THEN 
+        alloc = Basis_IS_allocated(Basis%tab_basis)
+        Do i=1,nb_basis
+        alloc  = alloc .and. Basis_IS_allocated(Basis)
+        END DO
+      ELSE  
+        alloc =             allocated(Basis%x)
+        alloc = alloc .AND. allocated(Basis%w)
+        alloc = alloc .AND. allocated(Basis%d0gb)
+        alloc = alloc .AND. allocated(Basis%d1gb)
+        alloc = alloc .AND. allocated(Basis%d2gb)
+      END IF
 
   END FUNCTION Basis_IS_allocated
 
@@ -128,8 +134,9 @@ CONTAINS
       END DO
       Basis%nb = product(Basis%tab_basis(:)%nb)
       Basis%nq = product(Basis%tab_basis(:)%nq)
-    ELSE
       Basis%nb_basis  = nb_basis
+    ELSE
+      
       Basis%nb        = nb
       Basis%nq        = nq
       Basis%Basis_name     = trim(adjustl(name))
@@ -500,6 +507,8 @@ SUBROUTINE hercom (nq,xp,w)
       write(out_unitp,*) ' ERROR in Scale_Basis'
       write(out_unitp,*) ' sx is too small  or ...'
       write(out_unitp,*) ' the basis is not allocated.'
+      write(out_unitp,*) 'Sx', Sx
+      write(out_unitp,*) 'alloc', Basis_IS_allocated(Basis)
       STOP 'ERROR in Scale_Basis'
     END IF
 
