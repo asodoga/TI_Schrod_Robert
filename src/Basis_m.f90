@@ -26,12 +26,14 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     TYPE(Basis_t),   intent(in)  :: Basis
     logical                      :: alloc
     integer                      :: i,nb_basis
-      IF ( allocated(Basis%tab_basis)) THEN 
-        alloc = Basis_IS_allocated(Basis%tab_basis)
+
+      alloc =allocated(Basis%tab_basis)
+      IF ( allocated(Basis%tab_basis)) THEN
+
         Do i=1,nb_basis
         alloc  = alloc .and. Basis_IS_allocated(Basis)
         END DO
-      ELSE  
+      ELSE
         alloc =             allocated(Basis%x)
         alloc = alloc .AND. allocated(Basis%w)
         alloc = alloc .AND. allocated(Basis%d0gb)
@@ -77,8 +79,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     write(out_unitp,*) '-------------------------------------------------'
 
   END SUBROUTINE Write_Basis
-  
-  
+
+
  !!!!! la modification de Robert!!!!!!!!!!
   RECURSIVE SUBROUTINE Read_Basis(Basis,nio)
     USE UtilLib_m
@@ -136,7 +138,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%nq = product(Basis%tab_basis(:)%nq)
       Basis%nb_basis  = nb_basis
     ELSE
-      
+
       Basis%nb        = nb
       Basis%nq        = nq
       Basis%Basis_name     = trim(adjustl(name))
