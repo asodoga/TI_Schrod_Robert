@@ -25,14 +25,13 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     TYPE(Basis_t),   intent(in)  :: Basis
     logical                      :: alloc
-    integer                      :: i,nb_basis
+    integer                      :: i
 
-      alloc =allocated(Basis%tab_basis)
+        alloc = allocated(Basis%tab_basis)
       IF ( allocated(Basis%tab_basis)) THEN
-
-        Do i=1,nb_basis
-        alloc  = alloc .and. Basis_IS_allocated(Basis)
-        END DO
+       Do i=1,size(Basis%tab_basis)
+        alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
+       END DO
       ELSE
         alloc =             allocated(Basis%x)
         alloc = alloc .AND. allocated(Basis%w)
@@ -66,12 +65,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       write(out_unitp,*) ' Basis tables (x, w, dngb) are not allocated.'
     END IF
 
-    write(out_unitp,*)
-    write(out_unitp,*)
-    write(out_unitp,*) 'nb_basis',Basis%nb_basis
-
+    !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
     IF (allocated(Basis%tab_basis)) THEN
-
       DO i=1,size(Basis%tab_basis)
         CALL Write_Basis(Basis%tab_basis(i))
       END DO
@@ -81,7 +76,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
   END SUBROUTINE Write_Basis
 
 
- !!!!! la modification de Robert!!!!!!!!!!
+
   RECURSIVE SUBROUTINE Read_Basis(Basis,nio)
     USE UtilLib_m
 
@@ -129,40 +124,33 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     IF (nb_basis > 1) THEN
       Basis%Basis_name     = 'Dp'
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
-
       allocate(Basis%tab_basis(nb_basis))
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
       Basis%nb = product(Basis%tab_basis(:)%nb)
       Basis%nq = product(Basis%tab_basis(:)%nq)
-      Basis%nb_basis  = nb_basis
-    ELSE
 
+    ELSE
+      Basis%nb_basis  = nb_basis
       Basis%nb        = nb
       Basis%nq        = nq
       Basis%Basis_name     = trim(adjustl(name))
        CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
     SELECT CASE (Basis%Basis_name)
-
      CASE ('boxab')
       CALL Construct_Basis_Sin(Basis)
-
       Q0      = A
       scaleQ  = pi/(B-A)
-
      CASE ('herm','Ho')
       CALL Construct_Basis_Ho(Basis)
      CASE default
       STOP 'ERROR in Read_Basis: no default basis.'
-     END SELECT
-
-   IF (.NOT. allocated(Basis%tab_basis)) THEN
+    END SELECT
      CALL Scale_Basis(Basis,Q0,scaleQ)
      CALL CheckOrtho_Basis(Basis,nderiv=2)
      CALL Write_Basis(Basis)
-   END IF
    END IF
 
  END SUBROUTINE Read_Basis

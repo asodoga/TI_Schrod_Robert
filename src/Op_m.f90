@@ -66,35 +66,100 @@ contains
     TYPE (Basis_t), intent(in),  target :: Basis
 
 
-    integer :: ib,iq
-
+    integer :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
+    real (kind=Rk), allocatable :: Q(:)
     real (kind=Rk), allocatable :: V(:),OpPsi_g(:)
 
-    IF (.NOT. Basis_IS_allocated(Basis)) THEN
+    IF(allocated(Basis%tab_basis)) THEN
+      allocate(Q(size(Basis%tab_basis)))
+      allocate(V(Basis%nq))
+      allocate(OpPsi_g(Basis%nq))
+        allocate(OP%RMat(Basis%nb,Basis%nb))
+      iq = 0
+      Do iq1=1,Basis%tab_basis(1)%nq
+      DO iq2=1,Basis%tab_basis(2)%nq
+        iq=iq+1
+        Q(1)=Basis%tab_basis(1)%x(iq1)
+        Q(2)=Basis%tab_basis(2)%x(iq2)
+        V(iq)=Calc_pot(Q)  !Calc_pot(Q(1))+ Calc_pot(Q(2))
+
+        !V(iq) = Calc_pot(Basis%tab_basis(1)%x(iq1))+Calc_pot(Basis%tab_basis(2)%x(iq2))
+      !  Write(10,*) "iq1,iq2,iq,V(iq)" ,iq1,iq2,iq,Q(:),V(iq)
+      END DO
+      END DO
+
+      ! calculation of Op|b_i>
+      ib=0
+      Op%RMat = ZERO
+      DO ib1=1,Basis%tab_basis(1)%nb
+      DO ib2=1,Basis%tab_basis(2)%nb
+         ib=ib+1
+         iq=0
+         Do iq1=1,Basis%tab_basis(1)%nq
+         DO iq2=1,Basis%tab_basis(2)%nq
+           iq=iq+1
+           OpPsi_g(iq) = V(iq) * Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2) ! potential part
+         END DO
+         END DO
+    !    OpPsi_g = OpPsi_g -HALF/mass * Basis%tab_basis(1)%d2gb(:,ib,1,1) -HALF/mass * Basis%tab_basis(2)%d2gb(:,ib,1,1)
+        ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
+      !  OpPsi_g = OpPsi_g * Basis%tab_basis(1)%w*Basis%tab_basis(2)%w
+         jb=0
+
+         DO jb1=1,Basis%tab_basis(1)%nb
+         DO jb2=1,Basis%tab_basis(2)%nb
+           jb=jb+1
+           iq=0
+           Do iq1=1,Basis%tab_basis(1)%nq
+           DO iq2=1,Basis%tab_basis(2)%nq
+             iq=iq+1
+             Op%RMat(jb,ib) = Op%RMat(jb,ib)+ Basis%tab_basis(1)%d0gb(iq1,jb1)*Basis%tab_basis(2)%d0gb(iq2,jb2)*OpPsi_g(iq)
+           END DO
+           END DO
+
+         END DO
+         END DO
+       END DO
+       END DO
+        CALL write_Op(Op)
+            STOP
+    ELSE IF( Basis_IS_allocated(Basis)) THEN
+        CALL alloc_Op(Op,Basis%nb)
+
+      Op%Basis => Basis
+      allocate( Q(1))
+
+      ! calculation of a potential on the grid
+      allocate(V(Basis%nq))
+      DO iq=1,Basis%nq
+        Q = Basis%x(iq)
+        V(iq) = Calc_pot(Q)
+      END DO
+
+      ! calculation of Op|b_i>
+      DO ib=1,Basis%nb
+
+        OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
+
+        OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
+
+        ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
+        OpPsi_g = OpPsi_g * Basis%w
+        DO jb=1,Basis%nb
+           Op%RMat(jb,ib) = dot_product(Basis%d0gb(:,jb),OpPsi_g)
+        END DO
+      END DO
+
+
+      CALL write_Op(Op)
+
+    ELSE
+    !END IF
+
+  !  IF (.NOT. Basis_IS_allocated(Basis)) THEN
       STOP 'ERROR in Set_Op: the Basis is not initialized'
     END IF
 
-    CALL alloc_Op(Op,Basis%nb)
-
-    Op%Basis => Basis
-
-    ! calculation of a potential on the grid
-    allocate(V(Basis%nq))
-    DO iq=1,Basis%nq
-      V(iq) = Calc_pot(Basis%x(iq))
-    END DO
-
-    ! calculation of Op|b_i>
-    DO ib=1,Basis%nb
-      OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
-      OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
-      ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
-      OpPsi_g = OpPsi_g * Basis%w
-      Op%RMat(:,ib) = matmul(transpose(Basis%d0gb),OpPsi_g)
-    END DO
-
-
-    CALL write_Op(Op)
 
 
   END SUBROUTINE Set_Op

@@ -11,9 +11,9 @@ contains
   FUNCTION Calc_pot(Q)
     real(kind=Rk)             :: Calc_pot
 
-    real(kind=Rk), intent(in) :: Q
+    real(kind=Rk), intent(in) :: Q(:)
 
-  Calc_pot = HALF * Q*Q
+  Calc_pot = HALF * dot_product( Q,Q)
 
   END FUNCTION Calc_pot
 

@@ -25,9 +25,10 @@ PROGRAM TI_Schrod
   CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
   psi%CVec(:) = CONE
   CALL Write_psi(psi)
-
   write(out_unitp,*) ' | H | Psi > calculation'
+
   CALL Set_op(H,Basis) ! to be change
+    STOP
   CALL calc_OpPsi(H,psi,Hpsi)
   CALL Write_psi(Hpsi)
 

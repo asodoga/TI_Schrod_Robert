@@ -23,6 +23,7 @@ contains
 
     CALL dealloc_psi(psi)
 
+
     IF (.NOT. Basis_IS_allocated(Basis)) STOP 'ERROR in Set_Op: the Basis is not initialized'
 
 
