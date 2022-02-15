@@ -43,7 +43,7 @@ contains
 
     TYPE(Op_t), intent(in) :: Op
 
-    integer :: i
+  !  integer :: i
 
     IF (associated(Op%Basis)) THEN
       write(out_unitp,*) ' The basis is linked to Op.'
@@ -67,11 +67,11 @@ contains
 
 
     integer :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
-    real (kind=Rk), allocatable :: Q(:)
+    real (kind=Rk), allocatable :: Q(:),WT(:)
     real (kind=Rk), allocatable :: V(:),OpPsi_g(:)
-
     IF(allocated(Basis%tab_basis)) THEN
       allocate(Q(size(Basis%tab_basis)))
+      allocate(WT(Basis%nq))
       allocate(V(Basis%nq))
       allocate(OpPsi_g(Basis%nq))
         allocate(OP%RMat(Basis%nb,Basis%nb))
@@ -84,7 +84,7 @@ contains
         V(iq)=Calc_pot(Q)  !Calc_pot(Q(1))+ Calc_pot(Q(2))
 
         !V(iq) = Calc_pot(Basis%tab_basis(1)%x(iq1))+Calc_pot(Basis%tab_basis(2)%x(iq2))
-      !  Write(10,*) "iq1,iq2,iq,V(iq)" ,iq1,iq2,iq,Q(:),V(iq)
+        Write(10,*) "iq1,iq2,iq,V(iq)" ,iq1,iq2,iq,Q(:),V(iq)
       END DO
       END DO
 
@@ -99,6 +99,11 @@ contains
          DO iq2=1,Basis%tab_basis(2)%nq
            iq=iq+1
            OpPsi_g(iq) = V(iq) * Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2) ! potential part
+           OpPsi_g(iq) = OpPsi_g(iq) -HALF/mass * Basis%tab_basis(1)%d2gb(iq1,ib1,1,1) &
+                                     -HALF/mass * Basis%tab_basis(2)%d2gb(iq2,ib2,1,1)
+              WT(iq)=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
+
+           OpPsi_g = OpPsi_g *WT(iq)! Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
          END DO
          END DO
     !    OpPsi_g = OpPsi_g -HALF/mass * Basis%tab_basis(1)%d2gb(:,ib,1,1) -HALF/mass * Basis%tab_basis(2)%d2gb(:,ib,1,1)
