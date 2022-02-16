@@ -1,5 +1,6 @@
 module Op_m
   USE NumParameters_m
+  USE diago_m
   USE Basis_m, only : Basis_t
   implicit none
   private
@@ -68,7 +69,7 @@ contains
 
     integer :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
     real (kind=Rk), allocatable :: Q(:),WT(:)
-    real (kind=Rk), allocatable :: V(:),OpPsi_g(:)
+    real (kind=Rk), allocatable :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
     IF(allocated(Basis%tab_basis)) THEN
       allocate(Q(size(Basis%tab_basis)))
       allocate(WT(Basis%nq))
@@ -153,6 +154,21 @@ contains
     ELSE
       STOP 'ERROR in Set_Op: the Basis is not initialized'
     END IF
+    allocate(EigenVal(Basis%nb))
+    allocate(EigenVec(Basis%nb,Basis%nb))
+      CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+    Write(out_unitp,*) 'eigenvalues = '
+    DO ib=1,Basis%nb
+        write(out_unitp,*) EigenVal(ib)
+    END DO
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+
+    DO ib=1,Basis%nb
+        write(*,*) (EigenVec(ib,iq),iq=1,Basis%nb)
+    END DO
 
 
 
@@ -178,6 +194,7 @@ contains
     ELSE
       STOP 'ERROR in calc_OpPsi: Psi is not initialized!'
     END IF
+
 
 
   END SUBROUTINE calc_OpPsi

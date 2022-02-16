@@ -28,7 +28,6 @@ PROGRAM TI_Schrod
   write(out_unitp,*) ' | H | Psi > calculation'
 
   CALL Set_op(H,Basis) ! to be change
-    STOP
   CALL calc_OpPsi(H,psi,Hpsi)
   CALL Write_psi(Hpsi)
 
