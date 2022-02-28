@@ -75,7 +75,7 @@ contains
       allocate(WT(Basis%nq))
       allocate(V(Basis%nq))
       allocate(OpPsi_g(Basis%nq))
-        allocate(OP%RMat(Basis%nb,Basis%nb))
+      allocate(OP%RMat(Basis%nb,Basis%nb))
       iq = 0
       Do iq1=1,Basis%tab_basis(1)%nq
       DO iq2=1,Basis%tab_basis(2)%nq
@@ -139,11 +139,8 @@ contains
 
       ! calculation of Op|b_i>
       DO ib=1,Basis%nb
-
         OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
-
         OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
-
         ! OpPsi_g is a vector on the grid. It must be projected on the basis (integration)
         OpPsi_g = OpPsi_g * Basis%w
         DO jb=1,Basis%nb
@@ -176,7 +173,7 @@ contains
 
 
   SUBROUTINE calc_OpPsi(Op,Psi,OpPsi)
-    USE psi_m, ONLY : psi_t
+  USE psi_m, ONLY : psi_t
 
     TYPE(Op_t),  intent(in)     :: Op
     TYPE(psi_t), intent(in)     :: Psi
@@ -199,4 +196,4 @@ contains
 
   END SUBROUTINE calc_OpPsi
 
-end module Op_m
+END MODULE Op_m

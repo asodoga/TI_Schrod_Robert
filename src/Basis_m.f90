@@ -75,21 +75,14 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   END SUBROUTINE Write_Basis
 
-
-
   RECURSIVE SUBROUTINE Read_Basis(Basis,nio)
-    USE UtilLib_m
+  USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
     integer,             intent(in)     :: nio
-
-
-
-    integer                         :: err_io
-
-    integer                         :: nb,nq,i,j,nb_basis
-    character (len=Name_len)        :: name
-    real(kind=Rk)                   :: A,B,scaleQ,Q0,d0,d2,X1,W1
+    integer                             :: err_io,nb,nq,i,j,nb_basis
+    character (len=Name_len)            :: name
+    real(kind=Rk)                       :: A,B,scaleQ,Q0,d0,d2,X1,W1
 
     NAMELIST /basis_nD/ name,nb_basis,nb,nq,A,B,scaleQ,Q0
     nb_basis  = 0
@@ -106,7 +99,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     IF (err_io < 0) THEN
       write(out_unitp,basis_nD)
       write(out_unitp,*) ' ERROR in Read_Basis'
-      write(out_unitp,*) '  while reading the namelist "basis_nD"'
+      write(out_unitp,*) ' while reading the namelist "basis_nD"'
       write(out_unitp,*) ' end of file or end of record'
       write(out_unitp,*) ' Probably, you forget a basis set ...'
       write(out_unitp,*) ' Check your data !!'
@@ -115,7 +108,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     IF (err_io > 0) THEN
       write(out_unitp,basis_nD)
       write(out_unitp,*) ' ERROR in Read_Basis'
-      write(out_unitp,*) '  while reading the namelist "basis_nD"'
+      write(out_unitp,*) ' while reading the namelist "basis_nD"'
       write(out_unitp,*) ' Probably, some arguments of namelist are wrong.'
       write(out_unitp,*) ' Check your data !!'
       STOP ' ERROR in Read_Basis: problems with the namelist.'
@@ -136,7 +129,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%nb        = nb
       Basis%nq        = nq
       Basis%Basis_name     = trim(adjustl(name))
-       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+      CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
     SELECT CASE (Basis%Basis_name)
      CASE ('boxab')
@@ -156,11 +149,9 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
  END SUBROUTINE Read_Basis
 
  SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
-  USE UtilLib_m
+ USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
-
-
     real(kind=Rk)          :: dx
     integer                :: ib,iq,nb,nq
 
@@ -193,10 +184,9 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
 
  SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
-  USE UtilLib_m
+ USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
-
     integer                :: i,j,nb,nq
 
     nb = Basis%nb
@@ -216,11 +206,10 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
         END DO
     END DO
 
+ END SUBROUTINE Construct_Basis_Ho
 
-END SUBROUTINE Construct_Basis_Ho
-
-FUNCTION poly_Hermite(x,l)
-  Implicit none
+ FUNCTION poly_Hermite(x,l)
+ Implicit none
     real(kind = Rk):: poly_Hermite
     real(kind = Rk):: pl0,pl1,pl2,norme,x
     integer        :: i,l
@@ -252,36 +241,31 @@ FUNCTION poly_Hermite(x,l)
        poly_Hermite = pl0/sqrt(norme)
      END IF
 
-END FUNCTION poly_Hermite
+ END FUNCTION poly_Hermite
 
-FUNCTION gamma_perso(n)
+ FUNCTION gamma_perso(n)
  Implicit none
     real(kind = Rk)  :: gamma_perso
     real(kind = Rk)  :: a
     integer          :: i,n
-       IF (n .LE. 0) THEN
-           write(out_unitp,*) 'ERROR: gamma( n<=0)',n
-           STOP
-       END IF
-         a = ONE
-       DO i = 1,n-1
-         a = a * dble (i)
-       END DO
-         gamma_perso = a
-END FUNCTION gamma_perso
 
-   SUBROUTINE herrec ( p2, dp2, p1, x, nq )
-      Implicit none
-      integer       ::i
-      integer       :: nq
-      real(kind = Rk):: dp0
-      real(kind = Rk):: dp1
-      real(kind = RK):: dp2
+    IF (n .LE. 0) THEN
+       write(out_unitp,*) 'ERROR: gamma( n<=0)',n
+       STOP
+    END IF
+      a = ONE
+    DO i = 1,n-1
+      a = a * dble (i)
+    END DO
+      gamma_perso = a
 
-      real(kind = Rk):: p0
-      real(kind = Rk):: p1
-      real(kind = Rk):: p2
-      real(kind = Rk):: x
+ END FUNCTION gamma_perso
+
+ SUBROUTINE herrec ( p2, dp2, p1, x, nq )
+ Implicit none
+    integer       ::i
+    integer       :: nq
+    real(kind = Rk):: dp0,dp1,dp2,p0,p1,p2,x
 
       p1  = ONE
       dp1 = ZERO
@@ -289,7 +273,7 @@ END FUNCTION gamma_perso
       p2  = x
       dp2 = ONE
 
-      DO i = 2, nq
+    DO i = 2, nq
 
         p0  = p1
         dp0 = dp1
@@ -300,78 +284,69 @@ END FUNCTION gamma_perso
         p2  = x * p1 - HALF * ( dble ( i ) - ONE ) * p0
         dp2 = x * dp1 + p1 - HALF * ( dble ( i ) - ONE ) * dp0
 
-    END DO
-   END SUBROUTINE herrec
+   END DO
+ END SUBROUTINE herrec
 
   SUBROUTINE herroot ( x, nq, dp2, p1 )
-    Implicit none
-      integer          :: i
-      integer          :: nq
-      real(kind = Rk),parameter  :: eps = TEN**(-TWELVE) ! 1.0d-12
-      real(kind = Rk)  :: d
-      real(kind = Rk)  :: dp2
-      real(kind = Rk)  :: p1
-      real(kind = Rk)  :: p2
-      real(kind = Rk)  :: x
+  Implicit none
+     integer          :: i
+     integer          :: nq
+     real(kind = Rk),parameter  :: eps = TEN**(-TWELVE) ! 1.0d-12
+     real(kind = Rk)  :: d,dp2,p1,p2,x
 
-      DO i = 1, 10
-
+    DO i = 1, 10
         CALL herrec ( p2, dp2, p1, x, nq )
-
         d = p2 / dp2
         x = x - d
-
         IF ( ABS ( d ) .LE. eps * ( ABS ( x ) + ONE ) ) THEN
           RETURN
         END IF
 
-      END DO
-   END SUBROUTINE herroot
+    END DO
 
-SUBROUTINE hercom (nq,xp,w)
-   Implicit none
+ END SUBROUTINE herroot
 
+ SUBROUTINE hercom (nq,xp,w)
+ Implicit none
       integer        :: i,nq
       real(kind = Rk):: cc,dp2,p1,s,temp,x
       real(kind = Rk):: w(nq),xp(nq)
 
+      CC = 1.7724538509_Rk * gamma_perso(nq ) / ( TWO**( nq-1) )
 
-
-      cc = 1.7724538509_Rk * gamma_perso(nq ) / ( TWO**( nq-1) )
-
-      s = ( TWO * dble (real(nq,Kind=Rk) ) + ONE )**( SIXTH )
+      S = ( TWO * dble (real(nq,Kind=Rk) ) + ONE )**( SIXTH )
 
       DO i = 1, ( nq + 1 ) / 2
 
-       IF ( i .EQ. 1 ) THEN
+         IF ( i .EQ. 1 ) THEN
 
           x = s**3 - 1.85575_Rk / s
 
-        ELSE IF ( i .EQ. 2 ) THEN
+         ELSE IF ( i .EQ. 2 ) THEN
 
           x = x - 1.14_Rk * ( ( dble ( nq ) )**0.426_Rk ) / x
 
-        ELSE IF ( i .EQ. 3 ) THEN
+         ELSE IF ( i .EQ. 3 ) THEN
 
           x = 1.86_Rk * x - 0.86_Rk * xp(1)
 
-        ELSE IF ( i .EQ. 4 ) THEN
+         ELSE IF ( i .EQ. 4 ) THEN
 
           x = 1.91_Rk * x - 0.91_Rk * xp(2)
 
-        ELSE
+         ELSE
 
           x = TWO * x - xp(i-2)
 
-        END IF
+         END IF
 
-        CALL herroot ( x,  nq, dp2, p1 )
+         CALL herroot ( x,  nq, dp2, p1 )
 
-        xp(i) = x
-        W(i) = cc / dp2 / p1
+         xp(i) = x
+         W(i) = cc / dp2 / p1
 
-        xp( nq-i+1) = - x
-        w( nq-i+1) = w(i)
+         xp( nq-i+1) = - x
+         w( nq-i+1) = w(i)
 
       END DO
 
@@ -382,25 +357,23 @@ SUBROUTINE hercom (nq,xp,w)
       END DO
 
       DO i = 1, nq
-     w(i) = w(i)*exp(xp(i)*xp(i))
+        w(i) = w(i)*exp(xp(i)*xp(i))
       END DO
+
  END SUBROUTINE hercom
 
  SUBROUTINE Construct_Basis_poly_Hermite_exp(x,d0gb,d1gb,d2gb,l,deriv)
 
-
-      logical deriv
-
+      logical        :: deriv
       integer        :: l
-
       real(kind = RK):: pexp,x,d0gb,d1gb,d2gb
 
-       IF (deriv) THEN
-
+      IF (deriv) THEN
           d0gb = poly_Hermite( x,l)
          IF (l .EQ. 0) THEN
           d1gb     = ZERO
           d2gb     = ZERO
+
          ELSE IF (l .EQ. 1) THEN
           d1gb = sqrt(TWO)*poly_Hermite( x,0)
           d2gb = ZERO
@@ -408,6 +381,7 @@ SUBROUTINE hercom (nq,xp,w)
          ELSE IF (l .EQ. 2) THEN
           d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
           d2gb = TWO*( x*d1gb-d0gb *l)
+
          ELSE
           d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
           d2gb = TWO*( x* d1gb-d0gb*l)
@@ -419,21 +393,17 @@ SUBROUTINE hercom (nq,xp,w)
           d0gb = d0gb*pexp
 
        ELSE
-         d0gb = poly_Hermite(x ,l)*exp(-HALF* x* x)
-         d1gb = ZERO
-         d2gb = ZERO
+          d0gb = poly_Hermite(x ,l)*exp(-HALF* x* x)
+          d1gb = ZERO
+          d2gb = ZERO
        END IF
 
   END SUBROUTINE Construct_Basis_poly_Hermite_exp
 
-!!!!!Fin de la modification de Robert!!!!!!!!!!
-
   SUBROUTINE CheckOrtho_Basis(Basis,nderiv)
   USE UtilLib_m
-
     TYPE(Basis_t),           intent(in)     :: Basis
     integer,                 intent(in)     :: nderiv
-
     integer                      :: ib
     real(kind=Rk), ALLOCATABLE   :: S(:,:)
     real(kind=Rk), ALLOCATABLE   :: d0bgw(:,:)
@@ -478,6 +448,149 @@ SUBROUTINE hercom (nq,xp,w)
 
   END SUBROUTINE CheckOrtho_Basis
 
+  SUBROUTINE BasisTOGrid_Basis(G,B,Basis)
+  USE UtilLib_m
+
+     TYPE(Basis_t),     intent(in)    :: Basis
+     real(kind=Rk),     intent(in)    :: B(:)
+     real(kind=Rk),     intent(inout) :: G(:)
+     integer                          :: ib,iq,iq1,iq2,nq,nb
+     integer                          :: jb,ib1,ib2,jb1,jb2
+
+     IF ( Basis_IS_allocated(Basis)) THEN
+
+      IF (size(B) /= Basis%nb) THEN
+        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+        write(out_unitp,*) ' La taille de B est differente de nb.'
+        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
+        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
+      END IF
+
+      IF (size(G) /= Basis%nq) THEN
+        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
+        write(out_unitp,*) ' La taille de G est differente de nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
+        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+      END IF
+
+      DO ib=1,Basis%nb
+      DO iq=1,Basis%nq
+        G(iq) = Basis%d0gb(iq,ib)*B(ib)
+      END DO
+      END DO
+
+    ELSE IF(allocated(Basis%tab_basis)) THEN
+
+      nb = product(Basis%tab_basis(:)%nb)
+      nq = product(Basis%tab_basis(:)%nq)
+
+      IF (size(B) /= nb) THEN
+        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+        write(out_unitp,*) ' La taille de B est differente de nb.'
+        write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
+        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
+      END IF
+      IF (size(G) /= nq) THEN
+        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
+        write(out_unitp,*) ' La taille de G est differente de nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
+        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+      END IF
+      ib=0
+      DO ib1=1,Basis%tab_basis(1)%nb
+      DO ib2=1,Basis%tab_basis(2)%nb
+         ib=ib+1
+         iq=0
+         Do iq1=1,Basis%tab_basis(1)%nq
+         DO iq2=1,Basis%tab_basis(2)%nq
+           iq=iq+1
+          G(iq) = Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*B(ib)
+         END DO
+         END DO
+       END DO
+       END DO
+    ELSE
+
+      write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+      write(out_unitp,*) "  basis n'est pas alloué."
+      STOP "ERREUR BasisTOGrid_Basis: basis n'est pas alloué."
+
+    END IF
+
+   END SUBROUTINE BasisTOGrid_Basis
+
+   SUBROUTINE GridTOBasis_Basis(B,G,Basis)
+   USE UtilLib_m
+
+     TYPE(Basis_t),    intent(in)    :: Basis
+     real(kind=Rk),    allocatable   :: WT(:)
+     real(kind=Rk),    intent(in)    :: G(:)
+     real(kind=Rk),    intent(inout) :: B(:)
+     integer                         :: ib,iq,iq1,iq2,nq,nb
+     integer                         :: jb,ib1,ib2,jb1,jb2
+
+     IF ( Basis_IS_allocated(Basis)) THEN
+
+       IF (size(B) /= Basis%nb) THEN
+        write(out_unitp,*) ' ERREUR dans GridTOBasis_Basis'
+        write(out_unitp,*) ' La taille de B est differente de nb.'
+        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
+        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de B.'
+      END IF
+
+      IF (size(G) /= Basis%nq) THEN
+        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
+        write(out_unitp,*) ' La taille de G est differente de nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
+        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+      END IF
+
+      DO ib=1,Basis%nb
+      DO iq=1,Basis%nq
+         B(ib) = Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq)
+      END DO
+      END DO
+
+    ELSE IF(allocated(Basis%tab_basis)) THEN
+      allocate(WT(nq))
+      nb = product(Basis%tab_basis(:)%nb)
+      nq = product(Basis%tab_basis(:)%nq)
+
+      IF (size(B) /= nb) THEN
+        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+        write(out_unitp,*) ' La taille de B est differente de nb.'
+        write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
+        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
+      END IF
+
+      IF (size(G) /= nq) THEN
+        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
+        write(out_unitp,*) ' La taille de G est differente de nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
+        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+      END IF
+
+      ib=0
+      DO ib1=1,Basis%tab_basis(1)%nb
+      DO ib2=1,Basis%tab_basis(2)%nb
+         ib=ib+1
+         iq=0
+         Do iq1=1,Basis%tab_basis(1)%nq
+         DO iq2=1,Basis%tab_basis(2)%nq
+           iq=iq+1
+           WT(iq)=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
+           B(ib) = Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*WT(iq)*G(iq)
+         END DO
+         END DO
+       END DO
+       END DO
+    ELSE
+      write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+      write(out_unitp,*) "  basis n'est pas alloué."
+      STOP "ERREUR BasisTOGrid_Basis: basis n'est pas alloué."
+    END IF
+
+  END SUBROUTINE GridTOBasis_Basis
 
   SUBROUTINE Scale_Basis(Basis,x0,sx)
   USE UtilLib_m
