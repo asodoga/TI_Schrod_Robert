@@ -4,20 +4,20 @@ MODULE Basis_m
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated
+  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis
 
   TYPE :: Basis_t
-    integer                         :: nb_basis   = 0
-    integer                         :: nb         = 0
-    integer                         :: nq         = 0
+    integer                      :: nb_basis   = 0
+    integer                      :: nb         = 0
+    integer                      :: nq         = 0
 
-    character (len=:),  allocatable :: Basis_name
+    character(len=:),allocatable :: Basis_name
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
     real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
     real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
-   TYPE (Basis_t),   allocatable :: tab_basis(:)
+    TYPE (Basis_t),  allocatable :: tab_basis(:)
   END TYPE Basis_t
 
 CONTAINS
@@ -27,18 +27,18 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     logical                      :: alloc
     integer                      :: i
 
-        alloc = allocated(Basis%tab_basis)
-      IF ( allocated(Basis%tab_basis)) THEN
-       Do i=1,size(Basis%tab_basis)
+    alloc = allocated(Basis%tab_basis)
+    IF ( allocated(Basis%tab_basis)) THEN
+      Do i=1,size(Basis%tab_basis)
         alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
-       END DO
-      ELSE
-        alloc =             allocated(Basis%x)
-        alloc = alloc .AND. allocated(Basis%w)
-        alloc = alloc .AND. allocated(Basis%d0gb)
-        alloc = alloc .AND. allocated(Basis%d1gb)
-        alloc = alloc .AND. allocated(Basis%d2gb)
-      END IF
+      END DO
+    ELSE
+      alloc =             allocated(Basis%x)
+      alloc = alloc .AND. allocated(Basis%w)
+      alloc = alloc .AND. allocated(Basis%d0gb)
+      alloc = alloc .AND. allocated(Basis%d1gb)
+      alloc = alloc .AND. allocated(Basis%d2gb)
+    END IF
 
   END FUNCTION Basis_IS_allocated
 
@@ -308,106 +308,84 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
  SUBROUTINE hercom (nq,xp,w)
  Implicit none
-      integer        :: i,nq
-      real(kind = Rk):: cc,dp2,p1,s,temp,x
-      real(kind = Rk):: w(nq),xp(nq)
+   integer        :: i,nq
+   real(kind = Rk):: cc,dp2,p1,s,temp,x
+   real(kind = Rk):: w(nq),xp(nq)
 
-      CC = 1.7724538509_Rk * gamma_perso(nq ) / ( TWO**( nq-1) )
+   CC = 1.7724538509_Rk * gamma_perso(nq ) / ( TWO**( nq-1) )
 
-      S = ( TWO * dble (real(nq,Kind=Rk) ) + ONE )**( SIXTH )
+   S = ( TWO * dble (real(nq,Kind=Rk) ) + ONE )**( SIXTH )
 
-      DO i = 1, ( nq + 1 ) / 2
-
-         IF ( i .EQ. 1 ) THEN
-
-          x = s**3 - 1.85575_Rk / s
-
-         ELSE IF ( i .EQ. 2 ) THEN
-
-          x = x - 1.14_Rk * ( ( dble ( nq ) )**0.426_Rk ) / x
-
-         ELSE IF ( i .EQ. 3 ) THEN
-
-          x = 1.86_Rk * x - 0.86_Rk * xp(1)
-
-         ELSE IF ( i .EQ. 4 ) THEN
-
-          x = 1.91_Rk * x - 0.91_Rk * xp(2)
-
-         ELSE
-
-          x = TWO * x - xp(i-2)
-
-         END IF
-
-         CALL herroot ( x,  nq, dp2, p1 )
-
-         xp(i) = x
-         W(i) = cc / dp2 / p1
-
-         xp( nq-i+1) = - x
-         w( nq-i+1) = w(i)
-
-      END DO
-
-      DO i = 1,  nq/2
-        temp = xp(i)
-        xp(i) = xp( nq+1-i)
-        xp( nq+1-i) = temp
-      END DO
-
-      DO i = 1, nq
-        w(i) = w(i)*exp(xp(i)*xp(i))
-      END DO
+   DO i = 1, ( nq + 1 ) / 2
+     IF ( i .EQ. 1 ) THEN
+       x = s**3 - 1.85575_Rk / s
+     ELSE IF ( i .EQ. 2 ) THEN
+       x = x - 1.14_Rk * ( ( dble ( nq ) )**0.426_Rk ) / x
+     ELSE IF ( i .EQ. 3 ) THEN
+       x = 1.86_Rk * x - 0.86_Rk * xp(1)
+     ELSE IF ( i .EQ. 4 ) THEN
+       x = 1.91_Rk * x - 0.91_Rk * xp(2)
+     ELSE
+       x = TWO * x - xp(i-2)
+     END IF
+     CALL herroot ( x,  nq, dp2, p1 )
+     xp(i) = x
+     W(i) = cc / dp2 / p1
+     xp( nq-i+1) = - x
+     w( nq-i+1) = w(i)
+   END DO
+   DO i = 1,  nq/2
+     temp = xp(i)
+     xp(i) = xp( nq+1-i)
+     xp( nq+1-i) = temp
+   END DO
+   DO i = 1, nq
+      w(i) = w(i)*exp(xp(i)*xp(i))
+   END DO
 
  END SUBROUTINE hercom
 
  SUBROUTINE Construct_Basis_poly_Hermite_exp(x,d0gb,d1gb,d2gb,l,deriv)
 
-      logical        :: deriv
-      integer        :: l
-      real(kind = RK):: pexp,x,d0gb,d1gb,d2gb
+   logical        :: deriv
+   integer        :: l
+   real(kind = RK):: pexp,x,d0gb,d1gb,d2gb
 
-      IF (deriv) THEN
-          d0gb = poly_Hermite( x,l)
-         IF (l .EQ. 0) THEN
-          d1gb     = ZERO
-          d2gb     = ZERO
-
-         ELSE IF (l .EQ. 1) THEN
-          d1gb = sqrt(TWO)*poly_Hermite( x,0)
-          d2gb = ZERO
-
-         ELSE IF (l .EQ. 2) THEN
-          d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
-          d2gb = TWO*( x*d1gb-d0gb *l)
-
-         ELSE
-          d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
-          d2gb = TWO*( x* d1gb-d0gb*l)
-         END IF
-
-          pexp = exp(- HALF* x* x)
-          d2gb = (d2gb-TWO*x*d1gb+( x* x-ONE)*d0gb)*pexp
-          d1gb = (d1gb- x*d0gb)*pexp
-          d0gb = d0gb*pexp
-
-       ELSE
-          d0gb = poly_Hermite(x ,l)*exp(-HALF* x* x)
-          d1gb = ZERO
-          d2gb = ZERO
-       END IF
+   IF (deriv) THEN
+      d0gb = poly_Hermite( x,l)
+      IF (l .EQ. 0) THEN
+        d1gb     = ZERO
+        d2gb     = ZERO
+      ELSE IF (l .EQ. 1) THEN
+        d1gb = sqrt(TWO)*poly_Hermite( x,0)
+        d2gb = ZERO
+      ELSE IF (l .EQ. 2) THEN
+        d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
+        d2gb = TWO*( x*d1gb-d0gb *l)
+      ELSE
+        d1gb = sqrt(TWO*l) * poly_Hermite( x,l-1)
+        d2gb = TWO*( x* d1gb-d0gb*l)
+      END IF
+      pexp = exp(- HALF* x* x)
+      d2gb = (d2gb-TWO*x*d1gb+( x* x-ONE)*d0gb)*pexp
+      d1gb = (d1gb- x*d0gb)*pexp
+      d0gb = d0gb*pexp
+    ELSE
+     d0gb = poly_Hermite(x ,l)*exp(-HALF* x* x)
+     d1gb = ZERO
+     d2gb = ZERO
+    END IF
 
   END SUBROUTINE Construct_Basis_poly_Hermite_exp
 
   SUBROUTINE CheckOrtho_Basis(Basis,nderiv)
   USE UtilLib_m
-    TYPE(Basis_t),           intent(in)     :: Basis
-    integer,                 intent(in)     :: nderiv
-    integer                      :: ib
-    real(kind=Rk), ALLOCATABLE   :: S(:,:)
-    real(kind=Rk), ALLOCATABLE   :: d0bgw(:,:)
-    real(kind=Rk)                :: Sii,Sij
+    TYPE(Basis_t),           intent(in)   :: Basis
+    integer,                 intent(in)   :: nderiv
+    integer                               :: ib
+    real(kind=Rk), ALLOCATABLE            :: S(:,:)
+    real(kind=Rk), ALLOCATABLE            :: d0bgw(:,:)
+    real(kind=Rk)                         :: Sii,Sij
 
 
     IF (Basis_IS_allocated(Basis)) THEN
@@ -451,26 +429,26 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
   SUBROUTINE BasisTOGrid_Basis(G,B,Basis)
   USE UtilLib_m
 
-     TYPE(Basis_t),     intent(in)    :: Basis
-     real(kind=Rk),     intent(in)    :: B(:)
-     real(kind=Rk),     intent(inout) :: G(:)
-     integer                          :: ib,iq,iq1,iq2,nq,nb
-     integer                          :: jb,ib1,ib2,jb1,jb2
+    TYPE(Basis_t),     intent(in)    :: Basis
+    real(kind=Rk),     intent(in)    :: B(:)
+    real(kind=Rk),     intent(inout) :: G(:)
+    integer                          :: ib,iq,iq1,iq2,nq,nb
+    integer                          :: jb,ib1,ib2,jb1,jb2
 
-     IF ( Basis_IS_allocated(Basis)) THEN
+    IF ( Basis_IS_allocated(Basis)) THEN
 
       IF (size(B) /= Basis%nb) THEN
-        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
+        write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
         write(out_unitp,*) ' La taille de B est differente de nb.'
         write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
-        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
+        STOP 'ERROR in BasisTOGrid_Basis: fausse taille de B.'
       END IF
 
       IF (size(G) /= Basis%nq) THEN
-        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
+        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
         write(out_unitp,*) ' La taille de G est differente de nq.'
         write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
-        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+        STOP 'ERREUR Dans BasisTOGrid_Basis: fausse taille de G.'
       END IF
 
       DO ib=1,Basis%nb
@@ -485,16 +463,16 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       nq = product(Basis%tab_basis(:)%nq)
 
       IF (size(B) /= nb) THEN
-        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
-        write(out_unitp,*) ' La taille de B est differente de nb.'
+        write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+        write(out_unitp,*) ' the size of B is different from nb.'
         write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
-        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
+        STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
       END IF
       IF (size(G) /= nq) THEN
-        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
-        write(out_unitp,*) ' La taille de G est differente de nq.'
+        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+        write(out_unitp,*) ' the size of G is different from nq.'
         write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
-        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
+        STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
       END IF
       ib=0
       DO ib1=1,Basis%tab_basis(1)%nb
@@ -511,11 +489,11 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
        END DO
     ELSE
 
-      write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
-      write(out_unitp,*) "  basis n'est pas alloué."
-      STOP "ERREUR BasisTOGrid_Basis: basis n'est pas alloué."
+       write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+       write(out_unitp,*) " the basis is not allocated."
+       STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
 
-    END IF
+     END IF
 
    END SUBROUTINE BasisTOGrid_Basis
 
@@ -532,47 +510,47 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      IF ( Basis_IS_allocated(Basis)) THEN
 
        IF (size(B) /= Basis%nb) THEN
-        write(out_unitp,*) ' ERREUR dans GridTOBasis_Basis'
-        write(out_unitp,*) ' La taille de B est differente de nb.'
-        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
-        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de B.'
-      END IF
+         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+         write(out_unitp,*) ' the size of B is different from nb..'
+         write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
+         STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
+       END IF
 
-      IF (size(G) /= Basis%nq) THEN
-        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
-        write(out_unitp,*) ' La taille de G est differente de nq.'
-        write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
-        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
-      END IF
+       IF (size(G) /= Basis%nq) THEN
+         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+         write(out_unitp,*) ' the size of G is different from nq.'
+         write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
+         STOP 'ERROR in GridTOBasis_Basis: wrong G size.'
+       END IF
 
-      DO ib=1,Basis%nb
-      DO iq=1,Basis%nq
+       DO ib=1,Basis%nb
+       DO iq=1,Basis%nq
          B(ib) = Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq)
-      END DO
-      END DO
+       END DO
+       END DO
 
-    ELSE IF(allocated(Basis%tab_basis)) THEN
-      allocate(WT(nq))
-      nb = product(Basis%tab_basis(:)%nb)
-      nq = product(Basis%tab_basis(:)%nq)
+     ELSE IF(allocated(Basis%tab_basis)) THEN
 
-      IF (size(B) /= nb) THEN
-        write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
-        write(out_unitp,*) ' La taille de B est differente de nb.'
-        write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
-        STOP 'ERREUR dans BasisTOGrid_Basis: fausse taille de B.'
-      END IF
+       nb = product(Basis%tab_basis(:)%nb)
+       nq = product(Basis%tab_basis(:)%nq)
+       allocate(WT(nq))
+       IF (size(B) /= nb) THEN
+         write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+         write(out_unitp,*) ' the size of G is different from nb.'
+         write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
+         STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
+       END IF
 
-      IF (size(G) /= nq) THEN
-        write(out_unitp,*) ' ERREUR Dans GridTOBasis_Basis'
-        write(out_unitp,*) ' La taille de G est differente de nq.'
-        write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
-        STOP 'ERREUR Dans GridTOBasis_Basis: fausse taille de G.'
-      END IF
+       IF (size(G) /= nq) THEN
+         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+         write(out_unitp,*) ' the size of G is different from nq.'
+         write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
+         STOP 'ERROR in GridTOBasis_Basis: wrong G size'
+       END IF
 
-      ib=0
-      DO ib1=1,Basis%tab_basis(1)%nb
-      DO ib2=1,Basis%tab_basis(2)%nb
+       ib=0
+       DO ib1=1,Basis%tab_basis(1)%nb
+       DO ib2=1,Basis%tab_basis(2)%nb
          ib=ib+1
          iq=0
          Do iq1=1,Basis%tab_basis(1)%nq
@@ -584,11 +562,11 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
          END DO
        END DO
        END DO
-    ELSE
-      write(out_unitp,*) ' ERREUR dans BasisTOGrid_Basis'
-      write(out_unitp,*) "  basis n'est pas alloué."
-      STOP "ERREUR BasisTOGrid_Basis: basis n'est pas alloué."
-    END IF
+     ELSE
+       write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+       write(out_unitp,*) " the basis is not allocated."
+       STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
+     END IF
 
   END SUBROUTINE GridTOBasis_Basis
 
