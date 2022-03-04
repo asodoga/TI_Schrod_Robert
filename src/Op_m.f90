@@ -68,11 +68,12 @@ contains
 
 
     integer :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
-    real (kind=Rk), allocatable :: Q(:),WT(:)
+    real (kind=Rk), allocatable :: Q(:),WT(:),G(:)
     real (kind=Rk), allocatable :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
     IF(allocated(Basis%tab_basis)) THEN
       allocate(Q(size(Basis%tab_basis)))
       allocate(WT(Basis%nq))
+      allocate(G(Basis%nb))
       allocate(V(Basis%nq))
       allocate(OpPsi_g(Basis%nq))
       allocate(OP%RMat(Basis%nb,Basis%nb))
@@ -88,7 +89,18 @@ contains
         Write(10,*) Q(:),V(iq)
       END DO
       END DO
+      !Test Robert
+      Call GridTOBasis_Basis(G,V,Basis)
 
+      DO ib=1,Basis%nb
+      Write(*,*) G(ib)
+      END DO
+      !Write(11,*) (G(ib),ib=1,Basis%nb)
+
+      Call BasisTOGrid_Basis(V,G,Basis)
+      DO iq=1,Basis%nq
+      Write(*,*) V(iq)
+      END DO
       ! calculation of Op|b_i>
       ib=0
       Op%RMat = ZERO
@@ -123,20 +135,22 @@ contains
          END DO
        END DO
        END DO
-        CALL write_Op(Op)
+       CALL write_Op(Op)
     ELSE IF( Basis_IS_allocated(Basis)) THEN
-        CALL alloc_Op(Op,Basis%nb)
+       CALL alloc_Op(Op,Basis%nb)
 
       Op%Basis => Basis
       allocate( Q(1))
-
+      allocate(G(Basis%nb))
       ! calculation of a potential on the grid
       allocate(V(Basis%nq))
       DO iq=1,Basis%nq
         Q = Basis%x(iq)
         V(iq) = Calc_pot(Q)
       END DO
-
+      DO iq=1,Basis%nq
+      Write(*,*) V(iq)
+      END DO
       ! calculation of Op|b_i>
       DO ib=1,Basis%nb
         OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
@@ -148,6 +162,19 @@ contains
         END DO
       END DO
       CALL write_Op(Op)
+      !Test Robert
+      Call GridTOBasis_Basis(G,V,Basis)
+
+      DO ib=1,Basis%nb
+      Write(*,*) G(ib)
+      END DO
+      !Write(11,*) (G(ib),ib=1,Basis%nb)
+
+      Call BasisTOGrid_Basis(V,G,Basis)
+      DO iq=1,Basis%nq
+      Write(*,*) V(iq)
+      END DO
+
     ELSE
       STOP 'ERROR in Set_Op: the Basis is not initialized'
     END IF
