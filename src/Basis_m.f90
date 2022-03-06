@@ -449,34 +449,10 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       flush(out_unitp)
     END IF
 
-    IF ( Basis_IS_allocated(Basis)) THEN
+   IF(allocated(Basis%tab_basis)) THEN
 
-      IF (size(B) /= Basis%nb) THEN
-        write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
-        write(out_unitp,*) ' the size of B is different from nb.'
-        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
-        STOP 'ERROR in BasisTOGrid_Basis:wrong B size.'
-      END IF
-
-      IF (size(G) /= Basis%nq) THEN
-        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
-        write(out_unitp,*) 'the size of G is different from nq.'
-        write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
-        STOP 'ERROR in BasisTOGrid_Basis: wrong G size.'
-      END IF
-
-      DO iq=1,Basis%nq
-        S=ZERO
-        DO ib=1,Basis%nb
-          S= S+Basis%d0gb(iq,ib)*B(ib)
-        END DO
-      G(iq)=S
-      END DO
-
-    ELSE IF(allocated(Basis%tab_basis)) THEN
-
-      nb = product(Basis%tab_basis(:)%nb)
-      nq = product(Basis%tab_basis(:)%nq)
+     nb = product(Basis%tab_basis(:)%nb)
+     nq = product(Basis%tab_basis(:)%nq)
 
       IF (size(B) /= nb) THEN
         write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
@@ -484,31 +460,57 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
         write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
         STOP 'ERROR in BasisTOGrid_Basis: wrong B size.'
       END IF
+
       IF (size(G) /= nq) THEN
         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
         write(out_unitp,*) ' the size of G is different from nq.'
         write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
         STOP 'ERROR in BasisTOGrid_Basis: wrong G size..'
       END IF
-      ib=0
-      DO ib1=1,Basis%tab_basis(1)%nb
-      DO ib2=1,Basis%tab_basis(2)%nb
-         ib=ib+1
-         iq=0
-         Do iq1=1,Basis%tab_basis(1)%nq
-         DO iq2=1,Basis%tab_basis(2)%nq
-           iq=iq+1
-          G(iq) = Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*B(ib)
-         END DO
-         END DO
-       END DO
-       END DO
-    ELSE
 
+      iq=0
+      DO iq1=1,Basis%tab_basis(1)%nq
+      DO iq2=1,Basis%tab_basis(2)%nq
+         iq=iq+1
+         ib=0
+         S=ZERO
+         Do ib1=1,Basis%tab_basis(1)%nb
+         DO ib2=1,Basis%tab_basis(2)%nb
+           ib=ib+1
+           S =S+ Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*B(ib)
+         END DO
+       END DO
+         G(iq)=S
+       END DO
+       END DO
+
+     ELSE IF ( Basis_IS_allocated(Basis)) THEN
+
+       IF (size(B) /= Basis%nb) THEN
+         write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+         write(out_unitp,*) ' the size of B is different from nb.'
+         write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
+         STOP 'ERROR in BasisTOGrid_Basis:wrong B size.'
+       END IF
+
+       IF (size(G) /= Basis%nq) THEN
+         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+         write(out_unitp,*) 'the size of G is different from nq.'
+         write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
+         STOP 'ERROR in BasisTOGrid_Basis: wrong G size.'
+       END IF
+
+       DO iq=1,Basis%nq
+          S=ZERO
+          DO ib=1,Basis%nb
+            S= S+Basis%d0gb(iq,ib)*B(ib)
+          END DO
+            G(iq)=S
+       END DO
+     ELSE
        write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
        write(out_unitp,*) " the basis is not allocated."
        STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
-
      END IF
      IF (debug) THEN
        write(out_unitp,*) 'intent(OUTIN) :: G(:)',G
@@ -535,75 +537,74 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
        !CALL Write_Basis(Basis)
        flush(out_unitp)
      END IF
-     IF ( Basis_IS_allocated(Basis)) THEN
 
-       IF (size(B) /= Basis%nb) THEN
-         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
-         write(out_unitp,*) ' the size of B is different from nb..'
-         write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
-         STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
-       END IF
+   IF(allocated(Basis%tab_basis)) THEN
 
-       IF (size(G) /= Basis%nq) THEN
-         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
-         write(out_unitp,*) ' the size of G is different from nq.'
-         write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
-         STOP 'ERROR in GridTOBasis_Basis: wrong G size.'
-       END IF
-
-       DO ib=1,Basis%nb
-         S=ZERO
-         DO iq=1,Basis%nq
-           S=S+Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq)
-         END DO
-         B(ib)=S
-       END DO
-
-     ELSE IF(allocated(Basis%tab_basis)) THEN
-
-       nb = product(Basis%tab_basis(:)%nb)
-       nq = product(Basis%tab_basis(:)%nq)
-       allocate(WT(nq))
-       IF (size(B) /= nb) THEN
-         write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
-         write(out_unitp,*) ' the size of G is different from nb.'
-         write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
-         STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
-       END IF
-
-       IF (size(G) /= nq) THEN
-         write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
-         write(out_unitp,*) ' the size of G is different from nq.'
-         write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
-         STOP 'ERROR in GridTOBasis_Basis: wrong G size'
-       END IF
-
-       ib=0
-       DO ib1=1,Basis%tab_basis(1)%nb
-       DO ib2=1,Basis%tab_basis(2)%nb
-         ib=ib+1
-         iq=0
-         S=ZERO
-         Do iq1=1,Basis%tab_basis(1)%nq
-         DO iq2=1,Basis%tab_basis(2)%nq
-           iq=iq+1
-           WT(iq)=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
-          S=S+Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*WT(iq)*G(iq)
-         END DO
-         END DO
-         B(ib)=S
-       END DO
-       END DO
-     ELSE
+     nb = product(Basis%tab_basis(:)%nb)
+     nq = product(Basis%tab_basis(:)%nq)
+     allocate(WT(nq))
+     IF (size(B) /= nb) THEN
        write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
-       write(out_unitp,*) " the basis is not allocated."
-       STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
-     END IF
-     IF (debug) THEN
+       write(out_unitp,*) ' the size of G is different from nb.'
+       write(out_unitp,*) ' size(B), Basis%nb',size(B),nb
+       STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
+      END IF
+
+      IF (size(G) /= nq) THEN
+        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+        write(out_unitp,*) ' the size of G is different from nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),nq
+        STOP 'ERROR in GridTOBasis_Basis: wrong G size'
+      END IF
+
+      ib=0
+      DO ib1=1,Basis%tab_basis(1)%nb
+      DO ib2=1,Basis%tab_basis(2)%nb
+        ib=ib+1
+        iq=0
+        S=ZERO
+        Do iq1=1,Basis%tab_basis(1)%nq
+        DO iq2=1,Basis%tab_basis(2)%nq
+          iq=iq+1
+          WT(iq)=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
+          S=S+Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*WT(iq)*G(iq)
+        END DO
+        END DO
+        B(ib)=S
+      END DO
+      END DO
+    ELSE IF ( Basis_IS_allocated(Basis)) THEN
+
+      IF (size(B) /= Basis%nb) THEN
+        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+        write(out_unitp,*) ' the size of B is different from nb..'
+        write(out_unitp,*) ' size(B), Basis%nb',size(B),Basis%nb
+        STOP 'ERROR in GridTOBasis_Basis: wrong B size.'
+      END IF
+
+      IF (size(G) /= Basis%nq) THEN
+        write(out_unitp,*) ' ERROR in GridTOBasis_Basis'
+        write(out_unitp,*) ' the size of G is different from nq.'
+        write(out_unitp,*) ' size(G), Basis%nq',size(G),Basis%nq
+        STOP 'ERROR in GridTOBasis_Basis: wrong G size.'
+      END IF
+      DO ib=1,Basis%nb
+        S=ZERO
+        DO iq=1,Basis%nq
+          S=S+Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq)
+        END DO
+          B(ib)=S
+      END DO
+    ELSE
+      write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+      write(out_unitp,*) " the basis is not allocated."
+      STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
+    END IF
+    IF (debug) THEN
        write(out_unitp,*) 'intent(OUTIN) :: B(:)',B
        write(out_unitp,*) 'END GridTOBasis_Basis'
        flush(out_unitp)
-     END IF
+    END IF
   END SUBROUTINE GridTOBasis_Basis
 
   SUBROUTINE Scale_Basis(Basis,x0,sx)

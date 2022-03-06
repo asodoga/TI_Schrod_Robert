@@ -1,3 +1,3 @@
 &basis_nD name='Dp' nb_basis=2     / 21
-&basis_nD name='boxAB' nb=10 nq=150 A=-2.5 B=2.5 /
-&basis_nD name='boxAB' nb=10 nq=150 A=-2.5 B=2.5 /
+&basis_nD name='boxAB' nb=4 nq=4 A=-2.5 B=2.5 /
+&basis_nD name='boxAB' nb=4 nq=4 A=-2.5 B=2.5 /
