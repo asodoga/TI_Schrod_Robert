@@ -6,7 +6,7 @@ module psi_m
   private
 
   TYPE :: psi_t
-    TYPE (Basis_t),    pointer     :: Basis
+    TYPE (Basis_t),    pointer     :: Basis => Null()
     real (kind=Rk),    allocatable :: RVec(:)
     complex (kind=Rk), allocatable :: CVec(:)
   END TYPE psi_t

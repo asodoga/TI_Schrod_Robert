@@ -30,6 +30,9 @@ PROGRAM TI_Schrod
   CALL Set_op(H,Basis) ! to be change
   CALL calc_OpPsi(H,psi,Hpsi)
   CALL Write_psi(Hpsi)
+  !Test Robert
+  !CALL Test_Basis_Grid_Basis(Basis)
+!  CALL Test_Grid_Basis_Grid(Basis)
 
   write(out_unitp,*) 'deallocation'
   CALL dealloc_Op(H)

@@ -1,4 +1,3 @@
 &basis_nD name='Dp' nb_basis=2     /
 &basis_nD name='herm'   nb=4 nq=6  /
-&basis_nD name='herm'   nb=4 nq=6  /
-
+&basis_nD name='herm'   nb=4 nq=6 /

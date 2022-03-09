@@ -7,7 +7,7 @@ module Op_m
 
   TYPE :: Op_t
 
-    TYPE (Basis_t),    pointer     :: Basis
+    TYPE (Basis_t),    pointer     :: Basis => Null()
 
     real (kind=Rk),    allocatable :: RMat(:,:)
   END TYPE Op_t
@@ -65,11 +65,17 @@ contains
 
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
+    logical,          parameter         :: debug = .true.
+    !logical,         parameter         ::debug = .false.
+    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
+    real (kind=Rk), allocatable         :: Q(:),WT(:),Psi_b(:),Psi_g(:)
+    real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
 
-
-    integer :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
-    real (kind=Rk), allocatable :: Q(:),WT(:),Psi_b(:),Psi_g(:)
-    real (kind=Rk), allocatable :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
+    Op%Basis => Basis
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Set_Op'
+      flush(out_unitp)
+    END IF
     IF(allocated(Basis%tab_basis)) THEN
       allocate(Q(size(Basis%tab_basis)))
       allocate(WT(Basis%nq))
@@ -90,46 +96,48 @@ contains
       END DO
       END DO
       ! calculation of Op|b_i>
-      ib=0
-      Op%RMat = ZERO
-      DO ib1=1,Basis%tab_basis(1)%nb
-      DO ib2=1,Basis%tab_basis(2)%nb
-         ib=ib+1
-         iq=0
-         Psi_g=ZERO
-         Do iq1=1,Basis%tab_basis(1)%nq
-         DO iq2=1,Basis%tab_basis(2)%nq
-           iq=iq+1
-           Psi_g(iq)=Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)
-           OpPsi_g(iq) = V(iq)*Psi_g(iq)  
-           OpPsi_g(iq) = OpPsi_g(iq) -HALF/mass *(Basis%tab_basis(1)%d2gb(iq1,ib1,1,1) &
-                                                * Basis%tab_basis(2)%d0gb(iq2,ib2))
-           OpPsi_g(iq) = OpPsi_g(iq) -HALF/mass *(Basis%tab_basis(1)%d0gb(iq1,ib1) &
-                                                * Basis%tab_basis(2)%d2gb(iq2,ib2,1,1))
-           WT(iq)=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
-           OpPsi_g(iq) = OpPsi_g(iq) *WT(iq)
-         END DO
-         END DO
-         jb=0
-         DO jb1=1,Basis%tab_basis(1)%nb
-         DO jb2=1,Basis%tab_basis(2)%nb
-           jb=jb+1
-           iq=0
-           Do iq1=1,Basis%tab_basis(1)%nq
-           DO iq2=1,Basis%tab_basis(2)%nq
-             iq=iq+1
-             Op%RMat(jb,ib) = Op%RMat(jb,ib)+ Basis%tab_basis(1)%d0gb(iq1,jb1)*Basis%tab_basis(2)%d0gb(iq2,jb2)*OpPsi_g(iq)
-           END DO
-           END DO
-         END DO
-         END DO
-       END DO
-       END DO
-       CALL write_Op(Op)
-    ELSE IF( Basis_IS_allocated(Basis)) THEN
-       CALL alloc_Op(Op,Basis%nb)
 
-      Op%Basis => Basis
+
+      Op%RMat = ZERO
+
+      ib1=1
+      ib2=0
+      DO ib=1,Basis%nb
+
+        IF (ib2 == Basis%tab_basis(2)%nb) THEN
+           ib1 = ib1 + 1
+           ib2 = 1
+         ELSE
+           ib2 = ib2 + 1
+         END IF
+
+         Psi_b(:)=ZERO
+         Psi_b(ib)=ONE
+
+         Call BasisTOGrid_Basis(Psi_g,Psi_b,Basis)
+
+         OpPsi_g(:) = V(:)*Psi_g(:)
+         iq1=1
+         iq2=0
+       DO Iq=1,Basis%nq
+         IF(iq2 == Basis%tab_basis(2)%nq) THEN
+            iq1 = iq1 + 1
+            iq2 = 1
+          ELSE
+            iq2 = iq2 + 1
+          END IF
+          OpPsi_g(iq) = OpPsi_g(iq) -HALF/mass *(Basis%tab_basis(1)%d2gb(iq1,ib1,1,1) &
+                                               * Basis%tab_basis(2)%d0gb(iq2,ib2))
+          OpPsi_g(iq) = OpPsi_g(iq) -HALF/mass *(Basis%tab_basis(1)%d0gb(iq1,ib1) &
+                                               * Basis%tab_basis(2)%d2gb(iq2,ib2,1,1))
+        END DO
+        Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Basis)
+      END DO
+      CALL write_Op(Op)
+
+    ELSE IF( Basis_IS_allocated(Basis)) THEN
+
+      CALL alloc_Op(Op,Basis%nb)
       allocate( Q(1))
       ! calculation of a potential on the grid
       allocate(V(Basis%nq))
@@ -162,6 +170,7 @@ contains
     DO ib=1,Basis%nb
         write(out_unitp,*) EigenVal(ib)
     END DO
+
     Write(out_unitp,*)
     Write(out_unitp,*)
 
@@ -169,6 +178,10 @@ contains
         write(*,*) (EigenVec(ib,iq),iq=1,Basis%nb)
     END DO
 
+    IF (debug) THEN
+      write(out_unitp,*) 'END Set_Op'
+      flush(out_unitp)
+    END IF
 
 
   END SUBROUTINE Set_Op
@@ -203,40 +216,6 @@ contains
         !V(iq) = Calc_pot(Basis%tab_basis(1)%x(iq1))+Calc_pot(Basis%tab_basis(2)%x(iq2))
         Write(10,*) Q(:),V(iq)
       END DO
-      END DO
-      !Test Robert
-    !  Write(9,*) 'G(iq)'
-      !DO iq=1,Basis%nq
-    !  Write(9,*) V(iq)
-    !  END DO
-    !  Call GridTOBasis_Basis(G,V,Basis)
-    !  Write(9,*) 'B(ib)'
-    !  DO ib=1,Basis%nb
-    !  Write(9,*) G(ib)
-    !  END DO
-      !Write(11,*) (G(ib),ib=1,Basis%nb)
-
-    !  Call BasisTOGrid_Basis(V,G,Basis)
-    !  Write(9,*) 'G(iq)'
-    !  DO iq=1,Basis%nq
-    !  Write(9,*) V(iq)
-      !END DO
-
-      B1(:)=ONE
-      DO ib=1,Basis%nb
-       Write(9,*) B1(ib)
-      END DO
-      Call BasisTOGrid_Basis(G,B1,Basis)
-      Write(9,*) 'G de la sortie'
-      DO iq=1,Basis%nq
-        Write(9,*) G(iq)
-      END DO
-       !Write(11,*) (G(ib),ib=1,Basis%nb)
-      Call GridTOBasis_Basis(B1,G,Basis)
-
-      Write(9,*) 'B1 de la sortie'
-      DO ib=1,Basis%nb
-        Write(9,*) B1(ib)
       END DO
 
       ! calculation of Op|b_i>
