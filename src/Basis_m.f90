@@ -5,7 +5,7 @@ MODULE Basis_m
 
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
-            Test_Basis_Grid_Basis,Test_Grid_Basis_Grid
+            Test_Passage
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -15,6 +15,8 @@ MODULE Basis_m
     character(len=:),allocatable :: Basis_name
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
+  !  real(kind=Rk),   allocatable :: d1gg(:,:)
+  !  real(kind=Rk),   allocatable :: d2gg(:,:)
     real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
     real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
@@ -26,8 +28,6 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     TYPE(Basis_t),   intent(in)  :: Basis
     logical                      :: alloc
-    logical,         parameter   :: debug = .true.
-    !logical,        parameter   :: debug = .false.
     integer                      :: i
 
     alloc = allocated(Basis%tab_basis)
@@ -39,6 +39,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       alloc =             allocated(Basis%x)
       alloc = alloc .AND. allocated(Basis%w)
       alloc = alloc .AND. allocated(Basis%d0gb)
+    !  alloc = alloc .AND. allocated(Basis%d1gg)
+    !  alloc = alloc .AND. allocated(Basis%d2gg)
       alloc = alloc .AND. allocated(Basis%d1gb)
       alloc = alloc .AND. allocated(Basis%d2gb)
     END IF
@@ -156,8 +158,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
  USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
-    real(kind=Rk)          :: dx
-    integer                :: ib,iq,nb,nq
+    real(kind=Rk)                       :: dx
+    integer                             :: ib,iq,nb,nq
 
     nb = Basis%nb
     nq = Basis%nq
@@ -175,6 +177,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%d0gb(:,ib)     =          sin(Basis%x(:)*ib) / sqrt(pi*HALF)
       Basis%d1gb(:,ib,1)   =  ib    * cos(Basis%x(:)*ib) / sqrt(pi*HALF)
       Basis%d2gb(:,ib,1,1) = -ib**2 * Basis%d0gb(:,ib)
+
     END DO
 
     IF (nb == nq) THEN
@@ -191,22 +194,22 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
  USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
-    integer                :: i,j,nb,nq
+    integer                :: iq,ib
 
-    nb = Basis%nb
-    nq = Basis%nq
-    allocate(Basis%x(nq))
-    allocate(Basis%w(nq))
 
-    call hercom(nq, Basis%x(:), Basis%w(:))
+    allocate(Basis%x(Basis%nq))
+    allocate(Basis%w(Basis%nq))
 
-    allocate(Basis%d0gb(nq,nb))
-    allocate(Basis%d1gb(nq,nb,1))
-    allocate(Basis%d2gb(nq,nb,1,1))
+    call hercom(Basis%nq, Basis%x(:), Basis%w(:))
 
-    DO i = 1, nq
-        DO j = 1, nb
-          CALL Construct_Basis_poly_Hermite_exp(Basis%x(i),Basis%d0gb(i,j), Basis%d1gb(i,j,1),Basis%d2gb(i,j,1,1), j-1,.TRUE.)
+    allocate(Basis%d0gb(Basis%nq,Basis%nb))
+    allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
+    allocate(Basis%d2gb(Basis%nq,Basis%nb,1,1))
+
+    DO iq = 1, Basis%nq
+        DO ib = 1, Basis%nb
+          CALL Construct_Basis_poly_Hermite_exp(Basis%x(iq),Basis%d0gb(iq,ib),&
+           Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)
         END DO
     END DO
 
@@ -573,19 +576,19 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   END SUBROUTINE GridTOBasis_Basis
 
-  SUBROUTINE Test_Grid_Basis_Grid(Basis)
+  SUBROUTINE Test_Passage(Basis)
   USE UtilLib_m
     logical,          parameter     :: debug = .true.
     !logical,         parameter     ::debug = .false.
     TYPE(Basis_t),    intent(in)    :: Basis
-    real(kind=Rk),    allocatable   :: G1(:)
-    real(kind=Rk),    allocatable   :: G2(:)
-    real(kind=Rk),    allocatable   :: B(:),Delta_g(:)
+    real(kind=Rk),    allocatable   :: G1(:),B1(:)
+    real(kind=Rk),    allocatable   :: G2(:),B2(:)
+    real(kind=Rk),    allocatable   :: B(:),Delta_g(:),Delta_b(:)
     real(kind=Rk),    parameter     :: eps = TEN**(-TEN)
     integer                         :: iq
 
     IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING Test_Grid_Basis_Grid'
+      write(out_unitp,*) 'BEGINNING Test_Passage'
     !  write(out_unitp,*) 'intent(in) :: G1(:)',G1
       flush(out_unitp)
     END IF
@@ -596,6 +599,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     allocate(G2(Basis%nq))
 
     G1(:)=ONE
+
     Call GridTOBasis_Basis(B,G1,Basis)
     Call BasisTOGrid_Basis(G2,B,Basis)
 
@@ -608,69 +612,36 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Write(out_unitp,*) maxval(Delta_g(:))
       STOP 'Bad translate for Test_Grid_Basis_Grid'
     END IF
-  !  Write(out_unitp,*) ' ABS(G1(:) - G2(:)) '
 
-  !  DO iq=1,Basis%nq
-  !    Write(out_unitp,*) Delta_g(iq)
-  !  END DO
+    IF (Basis%nq.le.Basis%nb ) THEN
+      allocate(Delta_b(Basis%nb))
+      allocate(B1(Basis%nb))
+      allocate(B2(Basis%nb))
+
+      B1(:)=ONE
+
+      Call BasisTOGrid_Basis(G1,B1,Basis)
+      Call GridTOBasis_Basis(B2,G1,Basis)
+
+      Delta_b(:) = ABS(B1(:) - B2(:))
+
+      IF (eps.gt.maxval(Delta_b(:)) ) THEN
+        Write(out_unitp,*) ' Best translate for Basis_Grid_Basis '
+        Write(out_unitp,*) maxval(Delta_b(:))
+      ELSE
+        STOP 'Bad translate for Basis_Grid_Basis'
+
+      END IF
+
+
+    END IF
     IF (debug) THEN
     !  write(out_unitp,*) 'intent(OUTIN) :: G2(:)',G2
-      write(out_unitp,*) 'END Test_Grid_Basis_Grid'
+      write(out_unitp,*) 'END Test_Passage'
       flush(out_unitp)
     END IF
 
-END SUBROUTINE Test_Grid_Basis_Grid
-
-SUBROUTINE Test_Basis_Grid_Basis(Basis)
-USE UtilLib_m
-  logical,          parameter     :: debug = .true.
-  !logical,         parameter     ::debug = .false.
-  TYPE(Basis_t),    intent(in)    :: Basis
-  real(kind=Rk),    allocatable   :: B1(:)
-  real(kind=Rk),    allocatable   :: B2(:)
-  real(kind=Rk),    allocatable   :: G(:),Delta_b(:)
-  real(kind=Rk),    parameter     :: esp = TEN**(-TEN)
-  integer                         :: ib
-
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING Test_Basis_Grid_Basis'
-    !write(out_unitp,*) 'intent(in) :: B1(:)',B1
-    flush(out_unitp)
-  END IF
-
-  allocate(G(Basis%nq))
-  allocate(Delta_b(Basis%nb))
-  allocate(B1(Basis%nb))
-  allocate(B2(Basis%nb))
-
-  B1(:)=ONE
-
-  Call BasisTOGrid_Basis(G,B1,Basis)
-  Call GridTOBasis_Basis(B2,G,Basis)
-
-  Delta_b(:) = ABS(B1(:) - B2(:))
-
-  IF (esp.gt.maxval(Delta_b(:)) ) THEN
-    Write(out_unitp,*) ' Best translate for Basis_Grid_Basis '
-    Write(out_unitp,*) maxval(Delta_b(:))
-  ELSE
-    STOP 'Bad translate for Basis_Grid_Basis'
-
-  END IF
-
-!  Write(out_unitp,*) ' ABS(B1(:) - B2(:)) '
-!  DO ib=1,Basis%nb
-!    Write(out_unitp,*) Delta_b(ib)
-!  END DO
-  IF (debug) THEN
-  !  write(out_unitp,*) 'intent(OUTIN) :: B2(:)',B2
-    write(out_unitp,*) 'END Test_Basis_Grid_Basis'
-    flush(out_unitp)
-  END IF
-
-END SUBROUTINE Test_Basis_Grid_Basis
-
-
+END SUBROUTINE Test_Passage
 
 SUBROUTINE Scale_Basis(Basis,x0,sx)
 USE UtilLib_m

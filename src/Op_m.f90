@@ -8,7 +8,7 @@ module Op_m
   TYPE :: Op_t
 
     TYPE (Basis_t),    pointer     :: Basis => Null()
-
+    real (kind=Rk),    allocatable :: Scalar_g(:) ! The scalar part of the operator (The potential for Hamiltonian)
     real (kind=Rk),    allocatable :: RMat(:,:)
   END TYPE Op_t
 
@@ -37,6 +37,10 @@ contains
       deallocate(Op%RMat)
     END IF
 
+    IF (allocated(Op%Scalar_g)) THEN
+      deallocate(Op%Scalar_g)
+    END IF
+
   END SUBROUTINE dealloc_Op
 
   SUBROUTINE write_Op(Op)
@@ -59,6 +63,7 @@ contains
 
   END SUBROUTINE write_Op
 
+
   SUBROUTINE Set_Op(Op,Basis)
   USE Basis_m
   USE Molec_m
@@ -67,7 +72,93 @@ contains
     TYPE (Basis_t), intent(in),  target :: Basis
     logical,          parameter         :: debug = .true.
     !logical,         parameter         ::debug = .false.
-    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2,jb1,jb2
+    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2
+    real (kind=Rk), allocatable         :: Q(:),WT(:),Psi_b(:),Psi_g(:)
+    real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
+
+    Op%Basis => Basis
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Set_Op'
+      flush(out_unitp)
+    END IF
+
+
+
+      allocate(Psi_b(Basis%nb))
+      allocate(Psi_g(Basis%nq))
+      allocate(Op%Scalar_g(Basis%nq))
+      allocate(OpPsi_g(Basis%nq))
+      allocate(OP%RMat(Basis%nb,Basis%nb))
+      CALL alloc_Op(Op,Basis%nb)
+
+      Op%RMat = ZERO
+      IF(allocated(Basis%tab_basis)) THEN
+        ib1=1
+        ib2=0
+        DO ib=1,Basis%nb
+
+          IF (ib2 == Basis%tab_basis(2)%nb) THEN
+           ib1 = ib1 + 1
+           ib2 = 1
+          ELSE
+           ib2 = ib2 + 1
+          END IF
+          Psi_b(:)=ZERO
+          Psi_b(ib)=ONE
+        END DO
+
+        ! Call BasisTOGrid_Basis(Psi_g,Psi_b,Basis)
+        CALL BasisTOGrid_Basis(Psi_g, Psi_b,Basis)
+
+     ELSE
+
+       DO ib=1,Basis%nb
+         Psi_g(:)=Basis%d0gb(:,ib)
+       END DO
+
+     END IF
+
+     CALL OpPsi_grid(OpPsi_g,Psi_g,Basis)
+   DO ib=1,Basis%nb
+   ! CALL GridTOBasis_Basis(OpPsi_b, OpPsi_g,Op%Basis)
+     Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Basis)
+   END DO
+     CALL write_Op(Op)
+     CALL alloc_Op(Op,Basis%nb)
+
+    allocate(EigenVal(Basis%nb))
+    allocate(EigenVec(Basis%nb,Basis%nb))
+    CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+    Write(out_unitp,*) 'eigenvalues = '
+    DO ib=1,Basis%nb
+        write(out_unitp,*) EigenVal(ib)
+    END DO
+
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+
+    DO ib=1,Basis%nb
+        write(*,*) (EigenVec(ib,iq),iq=1,Basis%nb)
+    END DO
+
+    IF (debug) THEN
+      write(out_unitp,*) 'END Set_Op'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE Set_Op
+
+  SUBROUTINE Set_Op1(Op,Basis)
+  USE Basis_m
+  USE Molec_m
+
+    TYPE(Op_t),     intent(inout)       :: Op
+    TYPE (Basis_t), intent(in),  target :: Basis
+    logical,          parameter         :: debug = .true.
+    !logical,         parameter         ::debug = .false.
+    integer                             :: ib,iq,iq1,iq2,jb,ib1,ib2
     real (kind=Rk), allocatable         :: Q(:),WT(:),Psi_b(:),Psi_g(:)
     real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
 
@@ -96,8 +187,6 @@ contains
       END DO
       END DO
       ! calculation of Op|b_i>
-
-
       Op%RMat = ZERO
 
       ib1=1
@@ -157,13 +246,12 @@ contains
       END DO
       CALL write_Op(Op)
 
-
     ELSE
       STOP 'ERROR in Set_Op: the Basis is not initialized'
     END IF
     allocate(EigenVal(Basis%nb))
     allocate(EigenVec(Basis%nb,Basis%nb))
-      CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
+    CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
     Write(out_unitp,*)
     Write(out_unitp,*)
     Write(out_unitp,*) 'eigenvalues = '
@@ -183,13 +271,125 @@ contains
       flush(out_unitp)
     END IF
 
+  END SUBROUTINE Set_Op1
 
-  END SUBROUTINE Set_Op
+  SUBROUTINE Potential(V,Basis)
+  USE Basis_m
+  USE Molec_m
+    logical,          parameter         :: debug = .true.
+   !logical,         parameter          ::debug = .false.
+    integer                             :: iq,iq1,iq2
+    real (kind=Rk), allocatable         :: Q(:)
+    real (kind=Rk), intent(out)         :: V(:)
+    TYPE(Basis_t),  intent(in)          :: Basis
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Potential'
+      flush(out_unitp)
+    END IF
+
+
+    IF (.NOT. Basis_IS_allocated(Basis)) THEN
+      write(out_unitp,*) ' ERROR in BasisTOGrid_Basis'
+      write(out_unitp,*) " the basis is not allocated."
+      STOP "ERROR BasisTOGrid_Basis: the basis is not allocated."
+    END IF
+
+    IF(allocated(Basis%tab_basis)) THEN
+      allocate(Q(size(Basis%tab_basis)))
+      iq1=1
+      iq2=0
+      DO iq=1,Basis%nq
+
+        IF (iq2 == Basis%tab_basis(2)%nq) THEN
+          iq1 = iq1 + 1
+          iq2 = 1
+        ELSE
+          iq2 = iq2 + 1
+        END IF
+        Q(1)=Basis%tab_basis(1)%x(iq1)
+        Q(2)=Basis%tab_basis(2)%x(iq2)
+        V(iq)=Calc_pot(Q)
+     END DO
+
+   ELSE IF( Basis_IS_allocated(Basis)) THEN
+     allocate( Q(1))
+     DO iq=1,Basis%nq
+       Q = Basis%x(iq)
+       V(iq) = Calc_pot(Q)
+     END DO
+   END IF
+
+   IF (debug) THEN
+    write(out_unitp,*) 'END Potential'
+    flush(out_unitp)
+   END IF
+END SUBROUTINE Potential
+
+SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Basis)
+USE Basis_m
+USE Molec_m
+    TYPE (Basis_t), intent(in)          :: Basis
+    TYPE(Op_t)                          :: Op
+    real (kind=Rk), intent(in)          :: Psi_g(:)
+    real (kind=Rk), intent(inout)       :: OpPsi_g(:)
+    logical,          parameter         :: debug = .true.
+   !logical,         parameter         ::debug = .false.
+    integer                             :: ib,iq,iq1,iq2,ib1,ib2
+
+
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING OpPsi_grid'
+      flush(out_unitp)
+    END IF
+    allocate(Op%Scalar_g(Basis%nq))
+
+    CALL Potential(Op%Scalar_g,Basis)
+
+    OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
+
+    IF(allocated(Basis%tab_basis)) THEN
+      ib1=1
+      ib2=0
+      DO ib=1,Basis%nb
+
+        IF (ib2 == Basis%tab_basis(2)%nb) THEN
+           ib1 = ib1 + 1
+           ib2 = 1
+         ELSE
+           ib2 = ib2 + 1
+         END IF
+        iq1=1
+        iq2=0
+        DO Iq=1,Basis%nq
+          IF(iq2 == Basis%tab_basis(2)%nq) THEN
+            iq1 = iq1 + 1
+            iq2 = 1
+          ELSE
+            iq2 = iq2 + 1
+          END IF
+
+          OpPsi_g(iq) = OpPsi_g(iq)-HALF/mass*(Basis%tab_basis(1)%d2gb(iq1,ib1,1,1)*Basis%tab_basis(2)%d0gb(iq2,ib2))
+          OpPsi_g(iq) = OpPsi_g(iq)-HALF/mass*(Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d2gb(iq2,ib2,1,1))
+        END DO
+      END DO
+    ELSE
+      DO ib=1,Basis%nb
+        OpPsi_g = Op%Scalar_g * Basis%d0gb(:,ib) ! potential part
+        OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1)
+        OpPsi_g = OpPsi_g * Basis%w
+      END DO
+    END IF
+
+
+    IF (debug) THEN
+      write(out_unitp,*) 'END OpPsi_grid'
+      flush(out_unitp)
+    END IF
+  END SUBROUTINE OpPsi_grid
 
   SUBROUTINE Set_Op_vo(Op,Basis)
   USE Basis_m
   USE Molec_m
-
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
 
@@ -266,11 +466,6 @@ contains
         Q = Basis%x(iq)
         V(iq) = Calc_pot(Q)
       END DO
-    !  Write(9,*) 'V à l Entreé'
-      !DO iq=1,Basis%nq
-    !  Write(9,*) V(iq)
-    !  END DO
-      ! calculation of Op|b_i>
       DO ib=1,Basis%nb
         OpPsi_g = V * Basis%d0gb(:,ib) ! potential part
         OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1) ! -1/2mass d2./dx2 part
@@ -281,44 +476,13 @@ contains
         END DO
       END DO
       CALL write_Op(Op)
-      !Test Robert
-!Call GridTOBasis_Basis(G,V,Basis)
-    !  Write(9,*) 'G de la sortie'
-    !  DO ib=1,Basis%nb
-      !Write(9,*) G(ib)
-    !  END DO
-      !Write(11,*) (G(ib),ib=1,Basis%nb)
-
-    !  Call BasisTOGrid_Basis(V,G,Basis)
-    !  Write(9,*) 'V de la sortie'
-    !  DO iq=1,Basis%nq
-    !  Write(9,*) V(iq)
-    !  END DO
-!B_G_B
-     B1(:)=ONE
-     DO ib=1,Basis%nb
-      Write(9,*) B1(ib)
-     END DO
-      Call BasisTOGrid_Basis(G,B1,Basis)
-      Write(9,*) 'G de la sortie'
-      DO iq=1,Basis%nq
-        Write(9,*) G(iq)
-      END DO
-      !Write(11,*) (G(ib),ib=1,Basis%nb)
-      Call GridTOBasis_Basis(B1,G,Basis)
-
-      Write(9,*) 'B1 de la sortie'
-      DO ib=1,Basis%nb
-      Write(9,*) B1(ib)
-      END DO
-
-
     ELSE
       STOP 'ERROR in Set_Op: the Basis is not initialized'
     END IF
+
     allocate(EigenVal(Basis%nb))
     allocate(EigenVec(Basis%nb,Basis%nb))
-      CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
+    CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Basis%nb)
     Write(out_unitp,*)
     Write(out_unitp,*)
     Write(out_unitp,*) 'eigenvalues = '
