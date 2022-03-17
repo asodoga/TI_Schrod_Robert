@@ -28,11 +28,12 @@ PROGRAM TI_Schrod
   write(out_unitp,*) ' | H | Psi > calculation'
 
   CALL Set_op(H,Basis) ! to be change
-stop 'ok'
+
   CALL calc_OpPsi(H,psi,Hpsi)
   CALL Write_psi(Hpsi)
   !Test Robert
   !CALL Test_Passage(Basis)
+  !Call Calc_dngg_grid(Basis)
   write(out_unitp,*) 'deallocation'
   CALL dealloc_Op(H)
   CALL dealloc_psi(psi)

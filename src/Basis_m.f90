@@ -173,7 +173,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     END SELECT
 
       CALL Scale_Basis(Basis,Q0,scaleQ)
-      CALL Calc_dngg_grid(Basis)
+      !CALL Calc_dngg_grid(Basis)
       CALL CheckOrtho_Basis(Basis,nderiv=2)
 
       CALL Write_Basis(Basis)
