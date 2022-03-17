@@ -5,7 +5,7 @@ MODULE Basis_m
 
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
-            Test_Passage
+            Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -15,11 +15,11 @@ MODULE Basis_m
     character(len=:),allocatable :: Basis_name
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
-  !  real(kind=Rk),   allocatable :: d1gg(:,:)
-  !  real(kind=Rk),   allocatable :: d2gg(:,:)
     real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis functions d0gb(nq,nb)
     real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis functions d2gb(nq,nb,1)
+    real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis functions d2gg(nq,nq,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
+    real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
     TYPE (Basis_t),  allocatable :: tab_basis(:)
   END TYPE Basis_t
 
@@ -39,13 +39,33 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       alloc =             allocated(Basis%x)
       alloc = alloc .AND. allocated(Basis%w)
       alloc = alloc .AND. allocated(Basis%d0gb)
-    !  alloc = alloc .AND. allocated(Basis%d1gg)
-    !  alloc = alloc .AND. allocated(Basis%d2gg)
       alloc = alloc .AND. allocated(Basis%d1gb)
       alloc = alloc .AND. allocated(Basis%d2gb)
     END IF
-
   END FUNCTION Basis_IS_allocated
+
+  RECURSIVE FUNCTION Basis_IS_allocatedtot(Basis) RESULT(alloc)
+
+      TYPE(Basis_t),   intent(in)  :: Basis
+      logical                      :: alloc
+      integer                      :: i
+
+      alloc = allocated(Basis%tab_basis)
+      IF ( allocated(Basis%tab_basis)) THEN
+        Do i=1,size(Basis%tab_basis)
+          alloc  = alloc .and. Basis_IS_allocated(Basis%tab_basis(i))
+        END DO
+      ELSE
+        alloc =             allocated(Basis%x)
+        alloc = alloc .AND. allocated(Basis%w)
+        alloc = alloc .AND. allocated(Basis%d0gb)
+        alloc = alloc .AND. allocated(Basis%d1gb)
+        alloc = alloc .AND. allocated(Basis%d2gb)
+        alloc = alloc .AND. allocated(Basis%d1gg)
+        alloc = alloc .AND. allocated(Basis%d2gg)
+      END IF
+
+    END FUNCTION Basis_IS_allocatedtot
 
   RECURSIVE SUBROUTINE Write_Basis(Basis)
   USE UtilLib_m
@@ -65,7 +85,11 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       write(out_unitp,*)
       CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
       write(out_unitp,*)
+      CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+      write(out_unitp,*)
       CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+      write(out_unitp,*)
+      CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
     ELSE
       write(out_unitp,*) ' Basis tables (x, w, dngb) are not allocated.'
     END IF
@@ -138,18 +162,21 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
     SELECT CASE (Basis%Basis_name)
-     CASE ('boxab')
+      CASE ('boxab')
       CALL Construct_Basis_Sin(Basis)
       Q0      = A
       scaleQ  = pi/(B-A)
-     CASE ('herm','Ho')
+      CASE ('herm','ho')
       CALL Construct_Basis_Ho(Basis)
-     CASE default
+      CASE default
       STOP 'ERROR in Read_Basis: no default basis.'
     END SELECT
-     CALL Scale_Basis(Basis,Q0,scaleQ)
-     CALL CheckOrtho_Basis(Basis,nderiv=2)
-     CALL Write_Basis(Basis)
+
+      CALL Scale_Basis(Basis,Q0,scaleQ)
+      CALL Calc_dngg_grid(Basis)
+      CALL CheckOrtho_Basis(Basis,nderiv=2)
+
+      CALL Write_Basis(Basis)
    END IF
 
  END SUBROUTINE Read_Basis
@@ -205,6 +232,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     allocate(Basis%d0gb(Basis%nq,Basis%nb))
     allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
     allocate(Basis%d2gb(Basis%nq,Basis%nb,1,1))
+
 
     DO iq = 1, Basis%nq
         DO ib = 1, Basis%nb
@@ -576,11 +604,54 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   END SUBROUTINE GridTOBasis_Basis
 
+  SUBROUTINE Calc_dngg_grid(Basis)
+  USE UtilLib_m
+    TYPE(Basis_t), intent(inout)    :: Basis
+
+    real(kind=Rk), allocatable      :: d0bgw(:,:)
+    integer                         :: ib
+    logical,          parameter     :: debug = .true.
+   !logical,         parameter     ::debug = .false.
+
+
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Calc_dngg_grid'
+      CALL Write_Basis(Basis)
+      flush(out_unitp)
+    END IF
+
+    allocate(Basis%d1gg(Basis%nq,Basis%nq,1))
+    allocate(Basis%d2gg(Basis%nq,Basis%nq,1,1))
+
+    d0bgw = transpose(Basis%d0gb)
+    DO ib=1,Basis%nb
+       d0bgw(ib,:) = d0bgw(ib,:) * Basis%w(:)
+    END DO
+
+    CALL Write_RMat(d0bgw(:,:),out_unitp,5,name_info='d0bgw')
+    write(out_unitp,*)
+
+    Basis%d1gg(:,:,1)   = matmul(Basis%d1gb(:,:,1),d0bgw)
+    Basis%d2gg(:,:,1,1) = matmul(Basis%d2gb(:,:,1,1),d0bgw)
+
+    CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+    write(out_unitp,*)
+    CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+    IF (debug) THEN
+      write(out_unitp,*) 'END Calc_dngg_grid'
+      CALL Write_Basis(Basis)
+      flush(out_unitp)
+    END IF
+    deallocate(d0bgw)
+
+  END SUBROUTINE Calc_dngg_grid
+
   SUBROUTINE Test_Passage(Basis)
   USE UtilLib_m
+    TYPE(Basis_t),    intent(in)    :: Basis
+
     logical,          parameter     :: debug = .true.
     !logical,         parameter     ::debug = .false.
-    TYPE(Basis_t),    intent(in)    :: Basis
     real(kind=Rk),    allocatable   :: G1(:),B1(:)
     real(kind=Rk),    allocatable   :: G2(:),B2(:)
     real(kind=Rk),    allocatable   :: B(:),Delta_g(:),Delta_b(:)
@@ -589,7 +660,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Test_Passage'
-    !  write(out_unitp,*) 'intent(in) :: G1(:)',G1
+      CALL Write_Basis(Basis)
       flush(out_unitp)
     END IF
 
@@ -613,7 +684,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       STOP 'Bad translate for Test_Grid_Basis_Grid'
     END IF
 
-    IF (Basis%nq.le.Basis%nb ) THEN
+    IF (Basis%nq.ge.Basis%nb ) THEN
       allocate(Delta_b(Basis%nb))
       allocate(B1(Basis%nb))
       allocate(B2(Basis%nb))
@@ -636,8 +707,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     END IF
     IF (debug) THEN
-    !  write(out_unitp,*) 'intent(OUTIN) :: G2(:)',G2
       write(out_unitp,*) 'END Test_Passage'
+      CALL Write_Basis(Basis)
       flush(out_unitp)
     END IF
 
@@ -648,6 +719,8 @@ USE UtilLib_m
 
     TYPE(Basis_t),       intent(inout)  :: Basis
     real(kind=Rk),       intent(in)     :: x0,sx
+
+
 
     IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_allocated(Basis)) THEN
 
@@ -665,6 +738,7 @@ USE UtilLib_m
       write(out_unitp,*) 'alloc', Basis_IS_allocated(Basis)
       STOP 'ERROR in Scale_Basis'
     END IF
+
 
   END SUBROUTINE Scale_Basis
 

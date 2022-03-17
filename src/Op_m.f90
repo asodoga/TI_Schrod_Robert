@@ -82,49 +82,29 @@ contains
       flush(out_unitp)
     END IF
 
+    allocate(Psi_b(Basis%nb))
+    allocate(Psi_g(Basis%nq))
+    allocate(OpPsi_g(Basis%nq))
 
 
-      allocate(Psi_b(Basis%nb))
-      allocate(Psi_g(Basis%nq))
-      allocate(Op%Scalar_g(Basis%nq))
-      allocate(OpPsi_g(Basis%nq))
-      allocate(OP%RMat(Basis%nb,Basis%nb))
-      CALL alloc_Op(Op,Basis%nb)
+    CALL alloc_Op(Op,Basis%nb)
 
-      Op%RMat = ZERO
-      IF(allocated(Basis%tab_basis)) THEN
-        ib1=1
-        ib2=0
-        DO ib=1,Basis%nb
+    Op%RMat = ZERO
 
-          IF (ib2 == Basis%tab_basis(2)%nb) THEN
-           ib1 = ib1 + 1
-           ib2 = 1
-          ELSE
-           ib2 = ib2 + 1
-          END IF
-          Psi_b(:)=ZERO
-          Psi_b(ib)=ONE
-        END DO
+    DO ib=1,Basis%nb
+      Psi_b(ib) =ONE
+    END DO
 
-        ! Call BasisTOGrid_Basis(Psi_g,Psi_b,Basis)
-        CALL BasisTOGrid_Basis(Psi_g, Psi_b,Basis)
+    CALL BasisTOGrid_Basis(Psi_g, Psi_b,Basis)
+    CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
+Stop 'ok'
+    ! CALL GridTOBasis_Basis(OpPsi_b, OpPsi_g,Op%Basis)
 
-     ELSE
-
-       DO ib=1,Basis%nb
-         Psi_g(:)=Basis%d0gb(:,ib)
-       END DO
-
-     END IF
-
-     CALL OpPsi_grid(OpPsi_g,Psi_g,Basis)
-   DO ib=1,Basis%nb
-   ! CALL GridTOBasis_Basis(OpPsi_b, OpPsi_g,Op%Basis)
-     Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Basis)
-   END DO
-     CALL write_Op(Op)
-     CALL alloc_Op(Op,Basis%nb)
+    DO ib=1,Basis%nb
+      Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Basis)
+    END DO
+    CALL write_Op(Op)
+    CALL alloc_Op(Op,Basis%nb)
 
     allocate(EigenVal(Basis%nb))
     allocate(EigenVec(Basis%nb,Basis%nb))
@@ -280,8 +260,9 @@ contains
    !logical,         parameter          ::debug = .false.
     integer                             :: iq,iq1,iq2
     real (kind=Rk), allocatable         :: Q(:)
-    real (kind=Rk), intent(out)         :: V(:)
+    real (kind=Rk), intent(inout)       :: V(:)
     TYPE(Basis_t),  intent(in)          :: Basis
+
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Potential'
       flush(out_unitp)
@@ -311,7 +292,7 @@ contains
         V(iq)=Calc_pot(Q)
      END DO
 
-   ELSE IF( Basis_IS_allocated(Basis)) THEN
+   ELSE
      allocate( Q(1))
      DO iq=1,Basis%nq
        Q = Basis%x(iq)
@@ -325,11 +306,11 @@ contains
    END IF
 END SUBROUTINE Potential
 
-SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Basis)
+SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op)
 USE Basis_m
 USE Molec_m
-    TYPE (Basis_t), intent(in)          :: Basis
-    TYPE(Op_t)                          :: Op
+
+    TYPE(Op_t) , intent(inout)          :: Op
     real (kind=Rk), intent(in)          :: Psi_g(:)
     real (kind=Rk), intent(inout)       :: OpPsi_g(:)
     logical,          parameter         :: debug = .true.
@@ -341,45 +322,14 @@ USE Molec_m
       write(out_unitp,*) 'BEGINNING OpPsi_grid'
       flush(out_unitp)
     END IF
-    allocate(Op%Scalar_g(Basis%nq))
 
-    CALL Potential(Op%Scalar_g,Basis)
+    allocate(Op%Scalar_g(Op%Basis%nq))
+
+    CALL Potential(Op%Scalar_g,Op%Basis)
 
     OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
 
-    IF(allocated(Basis%tab_basis)) THEN
-      ib1=1
-      ib2=0
-      DO ib=1,Basis%nb
-
-        IF (ib2 == Basis%tab_basis(2)%nb) THEN
-           ib1 = ib1 + 1
-           ib2 = 1
-         ELSE
-           ib2 = ib2 + 1
-         END IF
-        iq1=1
-        iq2=0
-        DO Iq=1,Basis%nq
-          IF(iq2 == Basis%tab_basis(2)%nq) THEN
-            iq1 = iq1 + 1
-            iq2 = 1
-          ELSE
-            iq2 = iq2 + 1
-          END IF
-
-          OpPsi_g(iq) = OpPsi_g(iq)-HALF/mass*(Basis%tab_basis(1)%d2gb(iq1,ib1,1,1)*Basis%tab_basis(2)%d0gb(iq2,ib2))
-          OpPsi_g(iq) = OpPsi_g(iq)-HALF/mass*(Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d2gb(iq2,ib2,1,1))
-        END DO
-      END DO
-    ELSE
-      DO ib=1,Basis%nb
-        OpPsi_g = Op%Scalar_g * Basis%d0gb(:,ib) ! potential part
-        OpPsi_g = OpPsi_g -HALF/mass * Basis%d2gb(:,ib,1,1)
-        OpPsi_g = OpPsi_g * Basis%w
-      END DO
-    END IF
-
+    OpPsi_g = OpPsi_g -HALF/mass *matmul(Op%Basis%d2gg(:,:,1,1),Psi_g)
 
     IF (debug) THEN
       write(out_unitp,*) 'END OpPsi_grid'
