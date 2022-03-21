@@ -52,7 +52,10 @@ contains
 
     IF (associated(Op%Basis)) THEN
       write(out_unitp,*) ' The basis is linked to Op.'
+    ELSE
+      write(out_unitp,*) ' The basis is NOT linked to Op.'
     END IF
+
 
     IF (allocated(Op%RMat)) THEN
       write(out_unitp,*) 'Writing Op (real):'
@@ -76,7 +79,8 @@ contains
     real (kind=Rk), allocatable         :: Q(:),WT(:),Psi_b(:),Psi_g(:)
     real (kind=Rk), allocatable         :: V(:),OpPsi_g(:),EigenVal(:),EigenVec(:,:)
 
-    Op%Basis => Basis
+
+
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Set_Op'
       flush(out_unitp)
@@ -89,6 +93,8 @@ contains
 
     CALL alloc_Op(Op,Basis%nb)
 
+    Op%Basis => Basis
+
     Op%RMat = ZERO
 
     DO ib=1,Basis%nb
@@ -96,8 +102,9 @@ contains
     END DO
 
     CALL BasisTOGrid_Basis(Psi_g, Psi_b,Basis)
+
     CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
-Stop 'ok'
+
     ! CALL GridTOBasis_Basis(OpPsi_b, OpPsi_g,Op%Basis)
 
     DO ib=1,Basis%nb
@@ -225,6 +232,8 @@ Stop 'ok'
         END DO
       END DO
       CALL write_Op(Op)
+      !Test robert
+      CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
 
     ELSE
       STOP 'ERROR in Set_Op: the Basis is not initialized'
@@ -247,7 +256,7 @@ Stop 'ok'
     END DO
 
     IF (debug) THEN
-      write(out_unitp,*) 'END Set_Op'
+      write(out_unitp,*) 'END '
       flush(out_unitp)
     END IF
 
@@ -320,11 +329,13 @@ USE Molec_m
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING OpPsi_grid'
+      call Write_op(op)
       flush(out_unitp)
     END IF
 
-    allocate(Op%Scalar_g(Op%Basis%nq))
 
+    allocate(Op%Scalar_g(Op%Basis%nq))
+  stop 'OK'
     CALL Potential(Op%Scalar_g,Op%Basis)
 
     OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
@@ -337,7 +348,7 @@ USE Molec_m
     END IF
   END SUBROUTINE OpPsi_grid
 
-  SUBROUTINE Set_Op_vo(Op,Basis)
+  SUBROUTINE set_op_vo(Op,Basis)
   USE Basis_m
   USE Molec_m
     TYPE(Op_t),     intent(inout)       :: Op

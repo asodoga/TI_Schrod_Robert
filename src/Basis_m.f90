@@ -4,7 +4,7 @@ MODULE Basis_m
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: Basis_t,Read_Basis,Write_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
+  PUBLIC :: Basis_t,Read_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
             Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot
 
   TYPE :: Basis_t
@@ -76,23 +76,49 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     write(out_unitp,*) '-------------------------------------------------'
     write(out_unitp,*) 'Write_Basis'
     write(out_unitp,*) 'nb,nq',Basis%nb,Basis%nq
-    IF (Basis_IS_allocated(Basis)) THEN
-      CALL Write_RVec(Basis%x,out_unitp,5,name_info='x')
+
+
+      IF (.NOT.allocated(Basis%x)) THEN
+       write(out_unitp,*)' Basis table x is not allocated.'
+      ELSE
+        CALL Write_RVec(Basis%x,out_unitp,5,name_info='x')
+      END IF
       write(out_unitp,*)
-      CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
+      IF (.NOT.allocated(Basis%W)) THEN
+        write(out_unitp,*)' Basis table w is not allocated.'
+      ELSE
+        CALL Write_RVec(Basis%w,out_unitp,5,name_info='w')
+      END IF
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+      IF (.NOT.allocated(Basis%d0gb)) THEN
+        write(out_unitp,*)' Basis table d0gb is not allocated.'
+      ELSE
+        CALL Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+      END IF
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+      IF (.NOT.allocated(Basis%d1gb)) THEN
+        write(out_unitp,*)' Basis table d1gb is not allocated.'
+      ELSE
+        CALL Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+      END IF
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+      IF (.NOT.allocated(Basis%d1gg)) THEN
+        write(out_unitp,*)' Basis table d1gb is not allocated.'
+      ELSE
+        CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+      END IF
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+      IF (.NOT.allocated(Basis%d2gb)) THEN
+        write(out_unitp,*)' Basis table d1gb is not allocated.'
+      ELSE
+        CALL Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+      END IF
       write(out_unitp,*)
-      CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
-    ELSE
-      write(out_unitp,*) ' Basis tables (x, w, dngb) are not allocated.'
-    END IF
+      IF (.NOT.allocated(Basis%d2gg)) THEN
+        write(out_unitp,*)' Basis table d2gg is not allocated.'
+      ELSE
+        CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+      END IF
 
     !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
     IF (allocated(Basis%tab_basis)) THEN
@@ -173,10 +199,10 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     END SELECT
 
       CALL Scale_Basis(Basis,Q0,scaleQ)
-      !CALL Calc_dngg_grid(Basis)
+      CALL Calc_dngg_grid(Basis)
       CALL CheckOrtho_Basis(Basis,nderiv=2)
 
-      CALL Write_Basis(Basis)
+      !CALL (Basis)
    END IF
 
  END SUBROUTINE Read_Basis

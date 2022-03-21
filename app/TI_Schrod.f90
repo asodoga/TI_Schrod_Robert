@@ -34,6 +34,8 @@ PROGRAM TI_Schrod
   !Test Robert
   !CALL Test_Passage(Basis)
   !Call Calc_dngg_grid(Basis)
+
+
   write(out_unitp,*) 'deallocation'
   CALL dealloc_Op(H)
   CALL dealloc_psi(psi)
