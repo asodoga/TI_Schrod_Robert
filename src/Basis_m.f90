@@ -5,7 +5,7 @@ MODULE Basis_m
 
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
-            Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot
+            Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot,write_basis
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -491,8 +491,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   SUBROUTINE BasisTOGrid_Basis(G,B,Basis)
   USE UtilLib_m
-    logical,           parameter     :: debug = .true.
-    !logical,          parameter     ::debug = .false.
+    !logical,           parameter     :: debug = .true.
+    logical,          parameter     ::debug = .false.
     TYPE(Basis_t),     intent(in)    :: Basis
     real(kind=Rk),     intent(in)    :: B(:)
     real(kind=Rk),     intent(inout) :: G(:)
@@ -560,8 +560,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
    SUBROUTINE GridTOBasis_Basis(B,G,Basis)
    USE UtilLib_m
-     logical,          parameter     :: debug = .true.
-     !logical,         parameter     ::debug = .false.
+     !logical,          parameter     :: debug = .true.
+     logical,         parameter      ::debug = .false.
      TYPE(Basis_t),    intent(in)    :: Basis
      real(kind=Rk),    intent(in)    :: G(:)
      real(kind=Rk),    intent(inout) :: B(:)
@@ -636,8 +636,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     real(kind=Rk), allocatable      :: d0bgw(:,:)
     integer                         :: ib
-    logical,          parameter     :: debug = .true.
-   !logical,         parameter     ::debug = .false.
+    !logical,          parameter     :: debug = .true.
+    logical,         parameter     ::debug = .false.
 
 
     IF (debug) THEN
@@ -654,20 +654,26 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
        d0bgw(ib,:) = d0bgw(ib,:) * Basis%w(:)
     END DO
 
-    CALL Write_RMat(d0bgw(:,:),out_unitp,5,name_info='d0bgw')
-    write(out_unitp,*)
+    IF (debug) THEN
+      CALL Write_RMat(d0bgw(:,:),out_unitp,5,name_info='d0bgw')
+      write(out_unitp,*)
+    END IF
+
+
 
     Basis%d1gg(:,:,1)   = matmul(Basis%d1gb(:,:,1),d0bgw)
     Basis%d2gg(:,:,1,1) = matmul(Basis%d2gb(:,:,1,1),d0bgw)
 
-    CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
-    write(out_unitp,*)
-    CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+    !CALL Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+    !write(out_unitp,*)
+    !CALL Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+
     IF (debug) THEN
-      write(out_unitp,*) 'END Calc_dngg_grid'
       CALL Write_Basis(Basis)
+      write(out_unitp,*) 'END Calc_dngg_grid'
       flush(out_unitp)
     END IF
+
     deallocate(d0bgw)
 
   END SUBROUTINE Calc_dngg_grid
