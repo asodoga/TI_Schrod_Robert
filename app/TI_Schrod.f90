@@ -30,11 +30,12 @@ PROGRAM TI_Schrod
   !Test Robert
   !CALL Test_Passage(Basis)
   !Call Calc_dngg_grid(Basis)
-!  CALL TEST_OpPsi_grid(Basis)
+
 
   CALL Set_op(Op,Basis) ! to be change
   CALL Make_Mat_OP(Op)
   CALL Diago_Op(Op)
+  CALL TEST_OpPsi_grid(Op)
 !Stop '34'
   !CALL calc_OpPsi(H,psi,Hpsi)
 !  CALL Write_psi(Hpsi)

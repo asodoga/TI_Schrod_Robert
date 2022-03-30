@@ -73,8 +73,8 @@ contains
 
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
-    logical,          parameter         :: debug = .true.
-    !logical,         parameter         ::debug = .false.
+    !logical,          parameter         :: debug = .true.
+    logical,         parameter         ::debug = .false.
     integer                             :: ib,iq
     real (kind=Rk), allocatable         :: Psi_b(:),Psi_g(:)
     real (kind=Rk), allocatable         :: OpPsi_g(:),EigenVal(:),EigenVec(:,:)
@@ -98,8 +98,8 @@ contains
   SUBROUTINE Make_Mat_OP(Op)
   USE Basis_m
     TYPE (Op_t),     intent(inout)      :: Op
-    logical,          parameter         :: debug = .true.
-    !logical,         parameter          :: debug = .false.
+    !logical,          parameter         :: debug = .true.
+    logical,         parameter          :: debug = .false.
     integer                             :: ib,iq,jb
     real (kind=Rk), allocatable         :: Psi_b(:),Psi_g(:)
     real (kind=Rk), allocatable         :: OpPsi_g(:)
@@ -127,6 +127,7 @@ contains
     deallocate(Psi_b)
     deallocate(Psi_g)
     deallocate(OpPsi_g)
+
     IF (debug) THEN
       write(out_unitp,*) 'END Make_Mat_OP'
       flush(out_unitp)
@@ -174,8 +175,8 @@ contains
   SUBROUTINE Potential(Op)
   USE Basis_m
   USE Molec_m
-   logical,          parameter         :: debug = .true.
-    !logical,         parameter          ::debug = .false.
+   !logical,          parameter         :: debug = .true.
+   logical,         parameter          :: debug = .false.
 
     integer                             :: iq,iq1,iq2
     real (kind=Rk), allocatable         :: Q(:)
@@ -222,8 +223,8 @@ contains
 
    IF (debug) THEN
      write(out_unitp,*)'v', Op%Scalar_g
-    write(out_unitp,*) 'END Potential'
-    flush(out_unitp)
+     write(out_unitp,*) 'END Potential'
+     flush(out_unitp)
    END IF
 END SUBROUTINE Potential
 
@@ -235,9 +236,11 @@ USE UtilLib_m
     TYPE(Op_t) , intent(inout)          :: Op
     real (kind=Rk), intent(in)          :: Psi_g(:)
     real (kind=Rk), intent(inout)       :: OpPsi_g(:)
+    real (kind=Rk), allocatable         :: Psi_gg(:,:)
+    real (kind=Rk), allocatable         :: opPsi_gg(:,:)
     !logical,          parameter         :: debug = .true.
-    logical,         parameter          ::debug = .false.
-
+    logical,         parameter          :: debug = .false.
+    integer                             :: iq,iq1,iq2,jq1,jq2
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING OpPsi_grid'
@@ -253,56 +256,150 @@ USE UtilLib_m
       CALL Potential(Op)
 
     END IF
+    !Psi_gg(:,:) = reshape(Psi_g,shape=[Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
+  !  Oppsi_gg(:,:) = reshape(Oppsi_g,shape=[Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
 
-    OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
 
-    OpPsi_g = OpPsi_g -HALF/mass *matmul(Op%Basis%d2gg(:,:,1,1),Psi_g)
+  !  Psi_g(:) = reshape(Psi_gg,shape=[Op%Basis%tab_basis(1)%nq*Op%Basis%tab_basis(2)%nq])
+    !Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%tab_basis(1)%nq*Op%Basis%tab_basis(2)%nq])
+
+    IF(allocated(Op%Basis%tab_basis)) THEN
+
+      OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
+
+      Allocate(Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
+      Allocate(OpPsi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
+
+      Psi_gg(:,:) = reshape(Psi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
+      Oppsi_gg(:,:) = reshape(Oppsi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
+
+
+
+
+      Do iq1 = 1,Op%Basis%tab_basis(1)%nq
+      DO iq2 = 1,Op%Basis%tab_basis(2)%nq
+        DO jq1 = 1,Op%Basis%tab_basis(1)%nq
+          OpPsi_gg(iq1,iq2) = OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(1)%d2gg(iq1,jq1,1,1)*Psi_gg(jq1,iq2)
+        END DO
+      END DO
+      END DO
+
+
+     Do iq1=1,Op%Basis%tab_basis(1)%nq
+     DO iq2=1,Op%Basis%tab_basis(2)%nq
+        DO jq2=1,Op%Basis%tab_basis(2)%nq
+          OpPsi_gg(iq1,iq2) =OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(2)%d2gg(iq2,jq2,1,1)*Psi_gg(iq1,jq2)
+        END DO
+    END DO
+    END DO
+
+
+      Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%nq])
+
+
+
+    ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
+
+      OpPsi_g(:) = Op%Scalar_g(:) * Psi_g(:)
+
+      OpPsi_g(:) = OpPsi_g(:) -HALF/mass * matmul(Op%Basis%d2gg(:,:,1,1),Psi_g(:))
+
+    END IF
 
     IF (debug) THEN
       CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
       write(out_unitp,*) 'END OpPsi_grid'
       flush(out_unitp)
     END IF
+
   END SUBROUTINE OpPsi_grid
 
-  SUBROUTINE TEST_OpPsi_grid(Basis)
+
+
+
+
+  SUBROUTINE TEST_OpPsi_grid(Op)
   USE Basis_m
   USE Molec_m
-      TYPE(Op_t)                          :: Op
-      TYPE(Basis_t),  intent(in),Target   :: Basis
-      real (kind=Rk),allocatable          :: Psi_g(:)
-      real (kind=Rk),allocatable          :: Dif_g(:)
-      real (kind=Rk),allocatable          :: OpPsi_g(:)
+    TYPE(Op_t) , intent(inout)          :: Op
+    real (kind=Rk),allocatable          :: Psi_g(:)
+    real (kind=Rk),allocatable          :: Psi_gg(:,:)
+    real (kind=Rk),allocatable          :: Dif_g(:)
+    real (kind=Rk),allocatable          :: OpPsi_g(:)
+    !logical,          parameter         :: debug = .true.
+    logical,         parameter          :: debug = .false.
+    integer                             :: iq,iq1,iq2
+    real(kind=Rk),    parameter         :: eps = TEN**(-TEN)
 
-      !logical,          parameter         :: debug = .true.
-      logical,         parameter         ::debug = .false.
-      integer                             :: iq
-      real(kind=Rk),    parameter         :: eps = TEN**(-TEN)
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING TEST_CALC'
+      CALL write_op(OP)
+      flush(out_unitp)
+    END IF
 
-      IF (debug) THEN
-        write(out_unitp,*) 'BEGINNING TEST_CALC'
-        flush(out_unitp)
+    IF(allocated(Op%Basis%tab_basis)) THEN
+
+      allocate( Psi_g(Op%Basis%nq))
+      allocate( Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
+      ! Psi analytic
+      !iq=0
+       !DO iq1=1,Op%Basis%tab_basis(1)%nq
+      ! DO iq2=1,Op%Basis%tab_basis(2)%nq
+        ! iq=iq+1
+        !  Psi_g(iq)=exp(-HALF*(Op%Basis%tab_basis(1)%x(iq1))**2)*exp(-HALF*(Op%Basis%tab_basis(2)%x(iq2))**2)
+
+      ! END DO
+       !END DO
+
+       !iq=0
+        DO iq1=1,Op%Basis%tab_basis(1)%nq
+        DO iq2=1,Op%Basis%tab_basis(2)%nq
+          !iq=iq+1
+           Psi_gg(iq1,iq2)=exp(-HALF*(Op%Basis%tab_basis(1)%x(iq1))**2)*exp(-HALF*(Op%Basis%tab_basis(2)%x(iq2))**2)
+
+        END DO
+        END DO
+       Psi_g(:) = reshape(Psi_gg,shape=[Op%Basis%nq])
+       allocate( OpPsi_g(Op%Basis%nq))
+
+      CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
+
+      DO iq=1,Op%Basis%nq
+        Write(out_unitp,*)iq,OpPsi_g(iq),ONE*Psi_g(iq)
+      END DO
+      allocate( Dif_g(Op%Basis%nq))
+
+      DO iq=1,Op%Basis%nq
+        Dif_g(iq)=ABS(OpPsi_g(iq)-ONE*Psi_g(iq))
+      END DO
+
+      IF (eps.gt.maxval(Dif_g(:)) ) THEN
+        Write(out_unitp,*) 'OpPsi_grid is correct '
+        Write(out_unitp,*) maxval(Dif_g(:))
+      ELSE
+        Write(out_unitp,*) maxval(Dif_g(:))
+        STOP 'OpPsi_grid is not correct'
       END IF
 
-      Op%Basis => Basis
+    ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
 
-      allocate( Psi_g(Basis%nq))
+      allocate( Psi_g(Op%Basis%nq))
 
      ! Psi analytic
 
-      DO iq=1,Basis%nq
-        Psi_g(iq)=exp(-HALF*(Basis%x(iq))**TWO)
+      DO iq=1,Op%Basis%nq
+        Psi_g(iq)=exp(-HALF*(Op%Basis%x(iq))**TWO)
       END DO
 
-      allocate( OpPsi_g(Basis%nq))
+      allocate( OpPsi_g(Op%Basis%nq))
 
       CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
-      DO iq=1,Basis%nq
+      DO iq=1,Op%Basis%nq
         Write(out_unitp,*)iq,OpPsi_g(iq),HALF*Psi_g(iq)
       END DO
-      allocate( Dif_g(Basis%nq))
+      allocate( Dif_g(Op%Basis%nq))
 
-      DO iq=1,Basis%nq
+      DO iq=1,Op%Basis%nq
         Dif_g(iq)=ABS(OpPsi_g(iq)-HALF*Psi_g(iq))
       END DO
 
@@ -313,11 +410,14 @@ USE UtilLib_m
         Write(out_unitp,*) maxval(Dif_g(:))
         STOP 'OpPsi_grid is not correct'
       END IF
-      IF (debug) THEN
-      !  CALL Write_RVec(Dif_g,out_unitp,5,name_info='Dif_g')
-        write(out_unitp,*) 'END TEST_CALC'
-        flush(out_unitp)
-      END IF
+
+    END IF
+
+    IF (debug) THEN
+    !  CALL Write_RVec(Dif_g,out_unitp,5,name_info='Dif_g')
+      write(out_unitp,*) 'END TEST_CALC'
+      flush(out_unitp)
+    END IF
 
   END SUBROUTINE TEST_OpPsi_grid
 
@@ -430,9 +530,8 @@ USE UtilLib_m
         write(*,*) (EigenVec(ib,iq),iq=1,Basis%nb)
     END DO
 
-
-
   END SUBROUTINE Set_Op_vo
+
   SUBROUTINE Set_Op1(Op,Basis)
   USE Basis_m
   USE Molec_m
