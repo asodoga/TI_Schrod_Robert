@@ -198,15 +198,15 @@ contains
 
     IF(allocated(Op%Basis%tab_basis)) THEN
       allocate(Q(size(Op%Basis%tab_basis)))
-      iq1=1
-      iq2=0
+      iq1=0
+      iq2=1
       DO iq=1,Op%Basis%nq
 
-        IF (iq2 == Op%Basis%tab_basis(2)%nq) THEN
-          iq1 = iq1 + 1
-          iq2 = 1
-        ELSE
+        IF (iq1 == Op%Basis%tab_basis(1)%nq) THEN
           iq2 = iq2 + 1
+          iq1 = 1
+        ELSE
+          iq1 = iq1 + 1
         END IF
         Q(1)=Op%Basis%tab_basis(1)%x(iq1)
         Q(2)=Op%Basis%tab_basis(2)%x(iq2)
