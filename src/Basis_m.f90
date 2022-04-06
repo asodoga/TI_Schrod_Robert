@@ -528,13 +528,14 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     IF(allocated(Basis%tab_basis)) THEN
       iq=0
-      DO iq1=1,Basis%tab_basis(1)%nq
       DO iq2=1,Basis%tab_basis(2)%nq
+      DO iq1=1,Basis%tab_basis(1)%nq
          iq=iq+1
          ib=0
          G(iq)=ZERO
-         Do ib1=1,Basis%tab_basis(1)%nb
          DO ib2=1,Basis%tab_basis(2)%nb
+         Do ib1=1,Basis%tab_basis(1)%nb
+
            ib=ib+1
            G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*B(ib)
          END DO
@@ -599,13 +600,13 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
      IF(allocated(Basis%tab_basis)) THEN
        ib=0
-       DO ib1=1,Basis%tab_basis(1)%nb
        DO ib2=1,Basis%tab_basis(2)%nb
+       DO ib1=1,Basis%tab_basis(1)%nb
          ib=ib+1
          iq=0
          B(ib)=ZERO
+         Do iq2=1,Basis%tab_basis(2)%nq
          Do iq1=1,Basis%tab_basis(1)%nq
-         DO iq2=1,Basis%tab_basis(2)%nq
            iq=iq+1
            WT=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
            B(ib)=B(ib)+Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*WT*G(iq)

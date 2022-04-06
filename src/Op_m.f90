@@ -256,12 +256,7 @@ USE UtilLib_m
       CALL Potential(Op)
 
     END IF
-    !Psi_gg(:,:) = reshape(Psi_g,shape=[Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
-  !  Oppsi_gg(:,:) = reshape(Oppsi_g,shape=[Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
 
-
-  !  Psi_g(:) = reshape(Psi_gg,shape=[Op%Basis%tab_basis(1)%nq*Op%Basis%tab_basis(2)%nq])
-    !Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%tab_basis(1)%nq*Op%Basis%tab_basis(2)%nq])
 
     IF(allocated(Op%Basis%tab_basis)) THEN
 
@@ -276,8 +271,9 @@ USE UtilLib_m
 
 
 
-      Do iq1 = 1,Op%Basis%tab_basis(1)%nq
-      DO iq2 = 1,Op%Basis%tab_basis(2)%nq
+      Do iq2 = 1,Op%Basis%tab_basis(2)%nq
+      DO iq1 = 1,Op%Basis%tab_basis(1)%nq
+        !OpPsi_gg(iq1,iq2) = -HALF/mass * dot_product(Op%Basis%tab_basis(1)%d2gg(iq1,:,1,1)*Psi_gg(:,iq2))
         DO jq1 = 1,Op%Basis%tab_basis(1)%nq
           OpPsi_gg(iq1,iq2) = OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(1)%d2gg(iq1,jq1,1,1)*Psi_gg(jq1,iq2)
         END DO
@@ -285,18 +281,15 @@ USE UtilLib_m
       END DO
 
 
-     Do iq1=1,Op%Basis%tab_basis(1)%nq
-     DO iq2=1,Op%Basis%tab_basis(2)%nq
+      Do iq2=1,Op%Basis%tab_basis(2)%nq
+      DO iq1=1,Op%Basis%tab_basis(1)%nq
         DO jq2=1,Op%Basis%tab_basis(2)%nq
           OpPsi_gg(iq1,iq2) =OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(2)%d2gg(iq2,jq2,1,1)*Psi_gg(iq1,jq2)
         END DO
-    END DO
-    END DO
-
+      END DO
+      END DO
 
       Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%nq])
-
-
 
     ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
 
