@@ -11,7 +11,8 @@ MODULE Basis_m
     integer                      :: nb_basis   = 0
     integer                      :: nb         = 0
     integer                      :: nq         = 0
-
+    !integer,         allocatable :: tab_iq(:)
+  !  integer,         allocatable :: tab_ib(:)
     character(len=:),allocatable :: Basis_name
     real(kind=Rk),   allocatable :: x(:)
     real(kind=Rk),   allocatable :: w(:)
@@ -174,6 +175,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%Basis_name     = 'Dp'
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
       allocate(Basis%tab_basis(nb_basis))
+      !allocate(Basis%tab_iq(nb_basis))
+      !allocate(Basis%tab_ib(nb_basis))
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
@@ -202,7 +205,6 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       CALL Calc_dngg_grid(Basis)
       CALL CheckOrtho_Basis(Basis,nderiv=2)
 
-      !CALL (Basis)
    END IF
 
  END SUBROUTINE Read_Basis
@@ -491,14 +493,18 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   SUBROUTINE BasisTOGrid_Basis(G,B,Basis)
   USE UtilLib_m
+  !USE NDindex_m
     !logical,           parameter     :: debug = .true.
-    logical,          parameter     ::debug = .false.
+    logical,          parameter      :: debug = .false.
     TYPE(Basis_t),     intent(in)    :: Basis
     real(kind=Rk),     intent(in)    :: B(:)
     real(kind=Rk),     intent(inout) :: G(:)
-    integer                          :: ib,iq,iq1,iq2,nq,nb
-    integer                          :: jb,ib1,ib2,jb1,jb2
+    !TYPE(Tab_t)                      :: Tab
 
+    integer                          :: tab_iq(2)
+    integer                          :: tab_ib(2)
+    integer                          :: ib,iq,nq,nb
+    integer                          :: jb,jb1,jb2
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING BasisTOGrid_Basis'
       write(out_unitp,*) 'intent(in) :: B(:)',B
@@ -527,20 +533,34 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     END IF
 
     IF(allocated(Basis%tab_basis)) THEN
-      iq=0
-      DO iq2=1,Basis%tab_basis(2)%nq
-      DO iq1=1,Basis%tab_basis(1)%nq
-         iq=iq+1
-         ib=0
+    !  Call alloc_Tab(Tab,nb_Basis)
+    !  Call Int_tab_ind(Tab)
+      tab_iq(1)=0
+      tab_iq(2)=1
+      DO Iq=1,Basis%nq
+        IF(tab_iq(1) == Basis%tab_basis(1)%nq) THEN
+          tab_iq(2)=tab_iq(2)+1
+          tab_iq(1)=1
+        ELSE
+          tab_iq(1)=tab_iq(1)+1
+        END IF
+     !  Call Tab_ind(Tab,Basis%tab_basis(1)%nq)
          G(iq)=ZERO
-         DO ib2=1,Basis%tab_basis(2)%nb
-         Do ib1=1,Basis%tab_basis(1)%nb
+      !  Call Int_tab_ind(Tab)
+         tab_ib(1)=0
+         tab_ib(2)=1
 
-           ib=ib+1
-           G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*B(ib)
+         DO ib=1,Basis%nb
+           IF(tab_ib(1) == Basis%tab_basis(1)%nb) THEN
+              tab_ib(2) = tab_ib(2) + 1
+              tab_ib(1) = 1
+            ELSE
+              tab_ib(1) = tab_ib(1) + 1
+            END IF
+            !  Call Tab_ind(Tab,Basis%tab_basis(1)%nq)
+           G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*Basis%tab_basis(2)&
+           %d0gb(tab_iq(2),tab_ib(2))*B(ib)
          END DO
-         END DO
-       END DO
        END DO
      ELSE
        DO iq=1,Basis%nq
@@ -567,6 +587,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      real(kind=Rk),    intent(in)    :: G(:)
      real(kind=Rk),    intent(inout) :: B(:)
      real(kind=Rk)                   :: WT
+     integer                         :: tab_iq(2)
+     integer                         :: tab_ib(2)
      integer                         :: ib,iq,iq1,iq2
      integer                         :: jb,ib1,ib2,jb1,jb2
 
@@ -599,20 +621,31 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      END IF
 
      IF(allocated(Basis%tab_basis)) THEN
-       ib=0
-       DO ib2=1,Basis%tab_basis(2)%nb
-       DO ib1=1,Basis%tab_basis(1)%nb
-         ib=ib+1
-         iq=0
-         B(ib)=ZERO
-         Do iq2=1,Basis%tab_basis(2)%nq
-         Do iq1=1,Basis%tab_basis(1)%nq
-           iq=iq+1
-           WT=Basis%tab_basis(1)%w(iq1)*Basis%tab_basis(2)%w(iq2)
-           B(ib)=B(ib)+Basis%tab_basis(1)%d0gb(iq1,ib1)*Basis%tab_basis(2)%d0gb(iq2,ib2)*WT*G(iq)
+       tab_ib(1)=0
+       tab_ib(2)=1
+       DO ib=1,Basis%nb
+         IF(tab_ib(1) == Basis%tab_basis(1)%nb) THEN
+            tab_ib(2) = tab_ib(2) + 1
+            tab_ib(1) = 1
+          ELSE
+            tab_ib(1) = tab_ib(1) + 1
+          END IF
+
+           B(ib)=ZERO
+           tab_iq(1)=0
+           tab_iq(2)=1
+           DO iq=1,Basis%nq
+             IF(tab_iq(1) == Basis%tab_basis(1)%nq) THEN
+                tab_iq(2) = tab_iq(2) + 1
+                tab_iq(1) = 1
+              ELSE
+                tab_iq(1) = tab_iq(1) + 1
+              END IF
+
+           WT=Basis%tab_basis(1)%w(tab_iq(1))*Basis%tab_basis(2)%w(tab_iq(2))
+           B(ib)=B(ib)+Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*&
+           Basis%tab_basis(2)%d0gb(tab_iq(2),tab_ib(2))*WT*G(iq)
          END DO
-         END DO
-       END DO
        END DO
      ELSE
        DO ib=1,Basis%nb

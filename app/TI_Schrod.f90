@@ -3,12 +3,13 @@ PROGRAM TI_Schrod
   USE Basis_m
   USE psi_m
   USE op_m
+
   IMPLICIT NONE
 
   TYPE (Basis_t), target :: Basis
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (op_t)            :: Op
-
+!  TYPE (Tab_t)           :: Tab
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
@@ -35,7 +36,7 @@ PROGRAM TI_Schrod
   CALL Set_op(Op,Basis) ! to be change
   CALL Make_Mat_OP(Op)
   CALL Diago_Op(Op)
-  CALL TEST_OpPsi_grid(Op)
+!  CALL TEST_OpPsi_grid(Op)
 !Stop '34'
   !CALL calc_OpPsi(H,psi,Hpsi)
 !  CALL Write_psi(Hpsi)

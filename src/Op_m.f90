@@ -1,6 +1,7 @@
 module Op_m
   USE NumParameters_m
   USE diago_m
+  !USE NDindex_m
   USE Basis_m, only : Basis_t
   implicit none
   private
@@ -48,7 +49,7 @@ contains
 
     TYPE(Op_t), intent(in) :: Op
 
-  !  integer :: i
+
 
     IF (associated(Op%Basis)) THEN
       write(out_unitp,*) ' The basis is linked to Op.'
@@ -70,6 +71,7 @@ contains
   SUBROUTINE Set_Op(Op,Basis)
   USE Basis_m
   USE Molec_m
+  USE NDindex_m
 
     TYPE(Op_t),     intent(inout)       :: Op
     TYPE (Basis_t), intent(in),  target :: Basis
@@ -176,9 +178,9 @@ contains
   USE Basis_m
   USE Molec_m
    !logical,          parameter         :: debug = .true.
-   logical,         parameter          :: debug = .false.
-
-    integer                             :: iq,iq1,iq2
+    logical,         parameter          :: debug = .false.
+    integer                             :: tab_iq(2)
+    integer                             :: iq!,iq1,iq2
     real (kind=Rk), allocatable         :: Q(:)
     TYPE(Op_t),  intent(inout)          :: Op
 
@@ -198,18 +200,18 @@ contains
 
     IF(allocated(Op%Basis%tab_basis)) THEN
       allocate(Q(size(Op%Basis%tab_basis)))
-      iq1=0
-      iq2=1
+      tab_iq(1)=0
+      tab_iq(2)=1
       DO iq=1,Op%Basis%nq
 
-        IF (iq1 == Op%Basis%tab_basis(1)%nq) THEN
-          iq2 = iq2 + 1
-          iq1 = 1
+        IF (tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
+          tab_iq(2) = tab_iq(2) + 1
+          tab_iq(1) = 1
         ELSE
-          iq1 = iq1 + 1
+          tab_iq(1) = tab_iq(1) + 1
         END IF
-        Q(1)=Op%Basis%tab_basis(1)%x(iq1)
-        Q(2)=Op%Basis%tab_basis(2)%x(iq2)
+        Q(1)=Op%Basis%tab_basis(1)%x(tab_iq(1))
+        Q(2)=Op%Basis%tab_basis(2)%x(tab_iq(2))
         Op%Scalar_g(iq)=Calc_pot(Q)
      END DO
 
@@ -240,8 +242,9 @@ USE UtilLib_m
     real (kind=Rk), allocatable         :: opPsi_gg(:,:)
     !logical,          parameter         :: debug = .true.
     logical,         parameter          :: debug = .false.
-    integer                             :: iq,iq1,iq2,jq1,jq2
-
+    integer                             :: iq,jq1,jq2
+    integer                             :: tab_iq(2)
+    integer                             :: tab_ib(2)
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING OpPsi_grid'
       CALL Write_op(op)
@@ -268,25 +271,37 @@ USE UtilLib_m
       Psi_gg(:,:) = reshape(Psi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
       Oppsi_gg(:,:) = reshape(Oppsi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
 
+      tab_iq(1)=0
+      tab_iq(2)=1
+      DO iq=1,Op%Basis%nq
+        IF (tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
+          tab_iq(2)=tab_iq(2)+1
+          tab_iq(1)=1
+        ELSE
+          tab_iq(1)=tab_iq(1)+1
+        END IF
 
-
-
-      Do iq2 = 1,Op%Basis%tab_basis(2)%nq
-      DO iq1 = 1,Op%Basis%tab_basis(1)%nq
-        !OpPsi_gg(iq1,iq2) = -HALF/mass * dot_product(Op%Basis%tab_basis(1)%d2gg(iq1,:,1,1)*Psi_gg(:,iq2))
         DO jq1 = 1,Op%Basis%tab_basis(1)%nq
-          OpPsi_gg(iq1,iq2) = OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(1)%d2gg(iq1,jq1,1,1)*Psi_gg(jq1,iq2)
+          OpPsi_gg(tab_iq(1),tab_iq(2)) = OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass&
+           *Op%Basis%tab_basis(1)%d2gg(tab_iq(1),jq1,1,1)*Psi_gg(jq1,tab_iq(2))
         END DO
       END DO
-      END DO
 
-
-      Do iq2=1,Op%Basis%tab_basis(2)%nq
-      DO iq1=1,Op%Basis%tab_basis(1)%nq
+      tab_iq(1)=0
+      tab_iq(2)=1
+      DO iq=1,Op%Basis%nq
+        IF(tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
+           tab_iq(2) = tab_iq(2) + 1
+           tab_iq(1) = 1
+         ELSE
+           tab_iq(1) = tab_iq(1) + 1
+         END IF
+         !OpPsi_gg(tab_iq(1),tab_iq(2))= -HALF/mass*dot_product(Psi_gg(tab_iq(1),:),Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1))
         DO jq2=1,Op%Basis%tab_basis(2)%nq
-          OpPsi_gg(iq1,iq2) =OpPsi_gg(iq1,iq2)-HALF/mass *Op%Basis%tab_basis(2)%d2gg(iq2,jq2,1,1)*Psi_gg(iq1,jq2)
+          OpPsi_gg(tab_iq(1),tab_iq(2)) =OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass*&
+          Op%Basis%tab_basis(2)%d2gg(tab_iq(2),jq2,1,1)*Psi_gg(tab_iq(1),jq2)
         END DO
-      END DO
+
       END DO
 
       Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%nq])
@@ -335,14 +350,7 @@ USE UtilLib_m
       allocate( Psi_g(Op%Basis%nq))
       allocate( Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
       ! Psi analytic
-      !iq=0
-       !DO iq1=1,Op%Basis%tab_basis(1)%nq
-      ! DO iq2=1,Op%Basis%tab_basis(2)%nq
-        ! iq=iq+1
-        !  Psi_g(iq)=exp(-HALF*(Op%Basis%tab_basis(1)%x(iq1))**2)*exp(-HALF*(Op%Basis%tab_basis(2)%x(iq2))**2)
 
-      ! END DO
-       !END DO
 
        !iq=0
         DO iq1=1,Op%Basis%tab_basis(1)%nq
@@ -552,18 +560,21 @@ USE UtilLib_m
       allocate(V(Basis%nq))
       allocate(OpPsi_g(Basis%nq))
       allocate(OP%RMat(Basis%nb,Basis%nb))
-      iq = 0
-      Do iq1=1,Basis%tab_basis(1)%nq
-      DO iq2=1,Basis%tab_basis(2)%nq
-        iq=iq+1
+      DO Iq=1,Basis%nq
+        IF(iq2 == Basis%tab_basis(2)%nq) THEN
+           iq1 = iq1 + 1
+           iq2 = 1
+         ELSE
+           iq2 = iq2 + 1
+         END IF
+
         Q(1)=Basis%tab_basis(1)%x(iq1)
         Q(2)=Basis%tab_basis(2)%x(iq2)
         V(iq)=Calc_pot(Q)  !Calc_pot(Q(1))+ Calc_pot(Q(2))
-        !V(iq) = Calc_pot(Basis%tab_basis(1)%x(iq1))+Calc_pot(Basis%tab_basis(2)%x(iq2))
+
         Write(10,*) Q(:),V(iq)
       END DO
-      END DO
-      ! calculation of Op|b_i>
+
       Op%RMat = ZERO
 
       ib1=1
