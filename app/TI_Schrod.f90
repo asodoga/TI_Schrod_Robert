@@ -3,13 +3,14 @@ PROGRAM TI_Schrod
   USE Basis_m
   USE psi_m
   USE op_m
+  USE NDindex_m
 
   IMPLICIT NONE
 
   TYPE (Basis_t), target :: Basis
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (op_t)            :: Op
-!  TYPE (Tab_t)           :: Tab
+  TYPE (NDindex_t)       :: NDindex
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
@@ -43,6 +44,7 @@ PROGRAM TI_Schrod
 
 
   write(out_unitp,*) 'deallocation'
+  CALL Testindex(NDindex)
   CALL dealloc_Op(OP)
   CALL dealloc_psi(psi)
   CALL dealloc_psi(Hpsi)

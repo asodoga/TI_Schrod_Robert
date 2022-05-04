@@ -1,1 +1,1 @@
-&basis_nD name='herm'   nb=2 nq=6 SCALEQ=1.5 Q0=0/
+&basis_nD name='herm'   nb=10 nq=30 SCALEQ=1 Q0=0/

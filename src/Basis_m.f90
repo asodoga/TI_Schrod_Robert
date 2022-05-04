@@ -5,7 +5,7 @@ MODULE Basis_m
 
   PRIVATE
   PUBLIC :: Basis_t,Read_Basis,Basis_IS_allocated,BasisTOGrid_Basis,GridTOBasis_Basis,&
-            Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot,write_basis
+          Test_Passage,Calc_dngg_grid,Basis_IS_allocatedtot,write_basis
 
   TYPE :: Basis_t
     integer                      :: nb_basis   = 0
@@ -330,24 +330,24 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     integer       :: nq
     real(kind = Rk):: dp0,dp1,dp2,p0,p1,p2,x
 
-      p1  = ONE
-      dp1 = ZERO
+    p1  = ONE
+    dp1 = ZERO
 
-      p2  = x
-      dp2 = ONE
+    p2  = x
+    dp2 = ONE
 
     DO i = 2, nq
 
-        p0  = p1
-        dp0 = dp1
+      p0  = p1
+      dp0 = dp1
 
-        p1  = p2
-        dp1 = dp2
+      p1  = p2
+      dp1 = dp2
 
-        p2  = x * p1 - HALF * ( dble ( i ) - ONE ) * p0
-        dp2 = x * dp1 + p1 - HALF * ( dble ( i ) - ONE ) * dp0
+      p2  = x * p1 - HALF * ( dble ( i ) - ONE ) * p0
+      dp2 = x * dp1 + p1 - HALF * ( dble ( i ) - ONE ) * dp0
 
-   END DO
+    END DO
  END SUBROUTINE herrec
 
   SUBROUTINE herroot ( x, nq, dp2, p1 )
@@ -533,8 +533,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     END IF
 
     IF(allocated(Basis%tab_basis)) THEN
-    !  Call alloc_Tab(Tab,nb_Basis)
-    !  Call Int_tab_ind(Tab)
+
       tab_iq(1)=0
       tab_iq(2)=1
       DO Iq=1,Basis%nq
@@ -544,9 +543,9 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
         ELSE
           tab_iq(1)=tab_iq(1)+1
         END IF
-     !  Call Tab_ind(Tab,Basis%tab_basis(1)%nq)
+
          G(iq)=ZERO
-      !  Call Int_tab_ind(Tab)
+      !
          tab_ib(1)=0
          tab_ib(2)=1
 
@@ -557,7 +556,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
             ELSE
               tab_ib(1) = tab_ib(1) + 1
             END IF
-            !  Call Tab_ind(Tab,Basis%tab_basis(1)%nq)
+
            G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*Basis%tab_basis(2)&
            %d0gb(tab_iq(2),tab_ib(2))*B(ib)
          END DO
