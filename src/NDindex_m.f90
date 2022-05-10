@@ -5,44 +5,47 @@ MODULE NDindex_m
 
   TYPE :: NDindex_t
     integer                       :: Ndim            = 0
-    integer                       :: Tab0_i(2)       = [0,1]
+    integer,  allocatable         :: Tab0(:)      ! = [0,1]
     integer, allocatable          :: NDsize(:)
     integer, allocatable          :: NDend(:)
   END TYPE NDindex_t
 
   PRIVATE
-  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t!,alloc_Tab
+  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t,Init_NDindex!,alloc_Tab
 
 CONTAINS
 
-  !SUBROUTINE alloc_Tab(Tab_i,NDindex)
-  !  TYPE(NDindex_t),  intent(in) :: NDindex
-  !  integer,     intent(inout)   :: Tab_i(:)
+
+  SUBROUTINE Init_NDindex(NDindex,NDend,Ndim)
+    TYPE(NDindex_t),intent(inout) :: NDindex
+    integer ,      intent(in)     :: NDend(:)
+    integer ,      intent(in)     :: Ndim
    !logical,    parameter      :: debug = .true.
-  !  logical,     parameter      :: debug = .false.
+    logical,     parameter        :: debug = .false.
 
-  !  IF (debug) THEN
-  !    write(out_unitp,*) 'BEGINNING alloc_Tab'
-  !    flush(out_unitp)
-  !  END IF
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING Init_NDindex'
+      flush(out_unitp)
+    END IF
 
-  !  IF ( NDindex%Ndim < 1) STOP 'ERROR in init_Tab: Ndim < 1!'
-  !  IF (allocated(Tab_i)) deallocate(Tab_i)
+    NDindex%Ndim = Ndim
+    NDindex%NDend = NDend
+    Allocate(NDindex%Tab0(NDindex%Ndim))
+    NDindex%Tab0(:)   = 0 ![0,1]
+    NDindex%Tab0(NDindex%Ndim)   = 1
 
-  !  allocate(Tab_i(NDindex%Ndim))
+    IF (debug) THEN
+      write(out_unitp,*) 'END Init_NDindex'
+      flush(out_unitp)
+    END IF
 
-  !  IF (debug) THEN
-  !    write(out_unitp,*) 'END alloc_Tab'
-  !    flush(out_unitp)
-  !  END IF
+  END SUBROUTINE Init_NDindex
 
-  !END SUBROUTINE alloc_Tab
-
-  SUBROUTINE Init_tab_ind(Tab_i,NDindex)
+  SUBROUTINE Init_tab_ind(Tab_ind,NDindex)
     USE UtilLib_m
     IMPLICIT NONE
     TYPE(NDindex_t),  intent(in) :: NDindex
-    integer,     intent(inout)   :: Tab_i(:)
+    integer,     intent(inout)   :: Tab_ind(:)
 
     !logical,    parameter       :: debug = .true.
     logical,     parameter       ::debug = .false.
@@ -51,10 +54,8 @@ CONTAINS
       write(out_unitp,*) 'BEGINNING Init_tab_ind'
       flush(out_unitp)
     END IF
-     Tab_i(:)= NDindex%Tab0_i(:)
 
-    !Tab_i(1)=0
-    !Tab_i(2)=1
+     Tab_ind(:)= NDindex%Tab0(:)
 
     IF (debug) THEN
       write(out_unitp,*) 'END Init_tab_ind'
@@ -63,28 +64,34 @@ CONTAINS
 
   END SUBROUTINE Init_tab_ind
 
-  SUBROUTINE increase_NDindex(Tab_i,NDindex,n1)
+  SUBROUTINE increase_NDindex(Tab_ind,NDindex,Endloop)
     USE UtilLib_m
     IMPLICIT NONE
 
     TYPE(NDindex_t),  intent(in) :: NDindex
-    integer,     intent(inout)   :: Tab_i(:)
-    integer,     intent(in)      :: n1
+
+    integer,     intent(inout)   :: Tab_ind(:)
     !logical,    parameter       :: debug = .true.
-    logical,     parameter       ::debug = .false.
+    logical,     parameter       :: debug = .false.
+    logical,     intent(inout)   :: Endloop
+
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Tab_ind'
       flush(out_unitp)
     END IF
 
-    IF(Tab_i(1) == n1) THEN
 
-      Tab_i(2)=Tab_i(2)+1
-      Tab_i(1)=1
+
+    IF(Tab_ind(1) == NDindex%Ndend(1)) THEN
+      Tab_ind(2)=Tab_ind(2)+1
+      Tab_ind(1)=1
     ELSE
-      Tab_i(1)=Tab_i(1)+1
+      Tab_ind(1)=Tab_ind(1)+1
     END IF
+    Endloop =(Tab_ind(2)>NDindex%Ndend(2))
+
+
 
     IF (debug) THEN
       write(out_unitp,*) 'END Tab_ind'
@@ -99,22 +106,26 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(NDindex_t),  intent(in) :: NDindex
-    integer                     :: Tab_i(2)
+    integer, allocatable         :: Tab_ind(:)
+    logical                      :: Endloop
   !  integer,     intent(in)      :: nl
     integer                      :: i
     !logical,    parameter      :: debug = .true.
-    logical,     parameter      ::debug = .false.
+    logical,     parameter      :: debug = .false.
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Testindex'
       flush(out_unitp)
     END IF
+    Allocate(Tab_ind(2))
+    Call Init_tab_ind(Tab_ind,NDindex)
 
-    !Call alloc_Tab(Tab_i,NDindex)
-    Call Init_tab_ind(Tab_i,NDindex)
-    DO i= 1,100
-      CALL increase_NDindex(Tab_i,NDindex,6)
-      write(out_unitp,*) i, tab_i(:)
+    i=0
+    DO !i= 1,100
+      i=i+1
+      CALL increase_NDindex(Tab_ind,NDindex,Endloop)
+        IF (Endloop) exit
+      write(out_unitp,*) i, tab_ind(:)
     END DO
 
     IF (debug) THEN

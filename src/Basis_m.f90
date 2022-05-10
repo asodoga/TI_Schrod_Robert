@@ -1,6 +1,6 @@
 MODULE Basis_m
   USE NumParameters_m
-
+  USE NDindex_m
   IMPLICIT NONE
 
   PRIVATE
@@ -493,14 +493,17 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
   SUBROUTINE BasisTOGrid_Basis(G,B,Basis)
   USE UtilLib_m
-  !USE NDindex_m
+  USE NDindex_m
     !logical,           parameter     :: debug = .true.
     logical,          parameter      :: debug = .false.
+    logical                          :: Endloop_q
+    logical                          :: Endloop_b
+    TYPE(NDindex_t)                  :: NDindexq
+    TYPE(NDindex_t)                  :: NDindexb
     TYPE(Basis_t),     intent(in)    :: Basis
     real(kind=Rk),     intent(in)    :: B(:)
     real(kind=Rk),     intent(inout) :: G(:)
-    !TYPE(Tab_t)                      :: Tab
-
+    integer                          :: Tab_ind(2)
     integer                          :: tab_iq(2)
     integer                          :: tab_ib(2)
     integer                          :: ib,iq,nq,nb
@@ -533,32 +536,30 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     END IF
 
     IF(allocated(Basis%tab_basis)) THEN
-
-      tab_iq(1)=0
-      tab_iq(2)=1
-      DO Iq=1,Basis%nq
-        IF(tab_iq(1) == Basis%tab_basis(1)%nq) THEN
-          tab_iq(2)=tab_iq(2)+1
-          tab_iq(1)=1
-        ELSE
-          tab_iq(1)=tab_iq(1)+1
-        END IF
-
+      CALL Init_NDindex(NDindexq,NDend=[Basis%tab_basis(1)%nq,&
+                    Basis%tab_basis(2)%nq],Ndim=size(Basis%tab_basis))
+      CALL Init_NDindex(NDindexb,NDend=[Basis%tab_basis(1)%nb,&
+                    Basis%tab_basis(2)%nb],Ndim=size(Basis%tab_basis))
+      Call Init_tab_ind(Tab_iq,NDindexq)
+      Iq=0
+      DO
+        Iq=Iq+1
+        CALL increase_NDindex(Tab_iq,NDindexq,Endloop_q)
+        IF (Endloop_q) exit
          G(iq)=ZERO
-      !
-         tab_ib(1)=0
-         tab_ib(2)=1
 
-         DO ib=1,Basis%nb
-           IF(tab_ib(1) == Basis%tab_basis(1)%nb) THEN
-              tab_ib(2) = tab_ib(2) + 1
-              tab_ib(1) = 1
-            ELSE
-              tab_ib(1) = tab_ib(1) + 1
-            END IF
 
-           G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*Basis%tab_basis(2)&
-           %d0gb(tab_iq(2),tab_ib(2))*B(ib)
+        Call Init_tab_ind(Tab_ib,NDindexb)
+        Ib=0
+        !
+        Do
+
+          Ib=Ib+1
+          CALL increase_NDindex(Tab_ib,NDindexb,Endloop_b)
+            IF (Endloop_b) exit
+
+            G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*Basis%tab_basis(2)&
+            %d0gb(tab_iq(2),tab_ib(2))*B(ib)
          END DO
        END DO
      ELSE
@@ -582,6 +583,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
    USE UtilLib_m
      !logical,          parameter     :: debug = .true.
      logical,         parameter      ::debug = .false.
+     logical                         :: Endloop
      TYPE(Basis_t),    intent(in)    :: Basis
      real(kind=Rk),    intent(in)    :: G(:)
      real(kind=Rk),    intent(inout) :: B(:)
@@ -620,8 +622,13 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      END IF
 
      IF(allocated(Basis%tab_basis)) THEN
+       !  CALL Init_NDindex(NDindex,NDend=[Basis%tab_basis(1)%nb,&
+       !  Basis%tab_basis(2)%nb],Ndim=size(Basis%tab_basis))
+
        tab_ib(1)=0
        tab_ib(2)=1
+       !Call Init_tab_ind(Tab_ind,NDindex)
+       !  Ib=0
        DO ib=1,Basis%nb
          IF(tab_ib(1) == Basis%tab_basis(1)%nb) THEN
             tab_ib(2) = tab_ib(2) + 1
@@ -629,10 +636,16 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
           ELSE
             tab_ib(1) = tab_ib(1) + 1
           END IF
-
+          !Ib=Ib+1
+          !CALL increase_NDindex(Tab_ind,NDindex,Endloop)
+          !  IF (Endloop) exit
            B(ib)=ZERO
+           !  CALL Init_NDindex(NDindex,NDend=[Basis%tab_basis(1)%nq,&
+           !  Basis%tab_basis(2)%nq],Ndim=size(Basis%tab_basis))
            tab_iq(1)=0
            tab_iq(2)=1
+           !Call Init_tab_ind(Tab_ind,NDindex)
+           !  Iq=0
            DO iq=1,Basis%nq
              IF(tab_iq(1) == Basis%tab_basis(1)%nq) THEN
                 tab_iq(2) = tab_iq(2) + 1
@@ -640,7 +653,9 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
               ELSE
                 tab_iq(1) = tab_iq(1) + 1
               END IF
-
+              !Iq=Iq+1
+              !CALL increase_NDindex(Tab_ind,NDindex,Endloop)
+              !  IF (Endloop) exit
            WT=Basis%tab_basis(1)%w(tab_iq(1))*Basis%tab_basis(2)%w(tab_iq(2))
            B(ib)=B(ib)+Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*&
            Basis%tab_basis(2)%d0gb(tab_iq(2),tab_ib(2))*WT*G(iq)

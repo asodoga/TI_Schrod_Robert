@@ -10,13 +10,14 @@ PROGRAM TI_Schrod
   TYPE (Basis_t), target :: Basis
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (op_t)            :: Op
-  TYPE (NDindex_t)       :: NDindex
+  !TYPE (NDindex_t)       :: NDindex
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
   !====================================================================
-
+  !CALL Init_NDindex(NDindex,NDend=[6,6],Ndim=2)
+  !CALL Testindex(NDindex)
 
   !write(out_unitp,*) 'Initialization of a real psi'
 
@@ -44,7 +45,7 @@ PROGRAM TI_Schrod
 
 
   write(out_unitp,*) 'deallocation'
-  CALL Testindex(NDindex)
+
   CALL dealloc_Op(OP)
   CALL dealloc_psi(psi)
   CALL dealloc_psi(Hpsi)
