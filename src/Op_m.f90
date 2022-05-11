@@ -280,27 +280,23 @@ USE UtilLib_m
         Iq=Iq+1
         CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
         IF (Endloop_q) exit
-        DO jq1 = 1,Op%Basis%tab_basis(1)%nq
-          OpPsi_gg(tab_iq(1),tab_iq(2)) = OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass&
-           *Op%Basis%tab_basis(1)%d2gg(tab_iq(1),jq1,1,1)*Psi_gg(jq1,tab_iq(2))
-        END DO
+
+        OpPsi_gg(tab_iq(1),tab_iq(2)) = OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass &
+        *dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_gg(:,tab_iq(2)))
+
       END DO
-
       Deallocate(Tab_iq)
-
       Allocate(Tab_iq1(size(Op%Basis%tab_basis)))
-
       Call Init_tab_ind(Tab_iq1,Op%Basis%NDindexq)
       Iq=0
       DO
         Iq=Iq+1
         CALL increase_NDindex(Tab_iq1,Op%Basis%NDindexq,Endloop_q)
         IF (Endloop_q) exit
+        
+        OpPsi_gg(tab_iq1(1),tab_iq1(2)) =OpPsi_gg(tab_iq1(1),tab_iq1(2))-HALF/mass &
+        *dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq1(2),:,1,1),Psi_gg(tab_iq1(1),:))
 
-        DO jq2=1,Op%Basis%tab_basis(2)%nq
-          OpPsi_gg(tab_iq1(1),tab_iq1(2)) =OpPsi_gg(tab_iq1(1),tab_iq1(2))-HALF/mass*&
-          Op%Basis%tab_basis(2)%d2gg(tab_iq1(2),jq2,1,1)*Psi_gg(tab_iq1(1),jq2)
-        END DO
       END DO
 
       Deallocate(Tab_iq1)

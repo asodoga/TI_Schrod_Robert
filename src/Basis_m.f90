@@ -176,8 +176,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%Basis_name     = 'Dp'
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
       allocate(Basis%tab_basis(nb_basis))
-      !allocate(Basis%tab_iq(nb_basis))
-      !allocate(Basis%tab_ib(nb_basis))
+      
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
@@ -506,6 +505,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     TYPE(Basis_t),     intent(in)    :: Basis
     real(kind=Rk),     intent(in)    :: B(:)
     real(kind=Rk),     intent(inout) :: G(:)
+    real(kind=Rk)                    :: W
     logical                          :: Endloop_q
     logical                          :: Endloop_b
     integer,         allocatable     :: tab_iq(:)
@@ -555,10 +555,11 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
           Ib=Ib+1
           CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
           IF (Endloop_b) exit
-        !  DO inb=1,size(Basis%tab_basis)
-            G(iq) =G(iq)+ Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*Basis%tab_basis(2)&
-            %d0gb(tab_iq(2),tab_ib(2))*B(ib)
-          !END DO
+          W=ONE
+          DO inb=1,size(Basis%tab_basis)
+            W=W* Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+          END DO
+          G(iq) =G(iq)+W*B(ib)
          END DO
        END DO
        Deallocate(Tab_ib)
@@ -589,7 +590,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      real(kind=Rk),    intent(inout) :: B(:)
      logical                         :: Endloop_q
      logical                         :: Endloop_b
-     real(kind=Rk)                   :: WT
+     real(kind=Rk)                   :: WT,W
      integer,        allocatable     :: tab_iq(:)
      integer,        allocatable     :: tab_ib(:)
      integer                         :: ib,iq,iq1,iq2,inb
@@ -639,11 +640,17 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
            Iq=Iq+1
            CALL increase_NDindex(Tab_iq,Basis%NDindexq,Endloop_q)
            IF (Endloop_q) exit
-           !DO inb=1,size(Basis%tab_basis)
-             WT=Basis%tab_basis(1)%w(tab_iq(1))*Basis%tab_basis(2)%w(tab_iq(2))
-             B(ib)=B(ib)+Basis%tab_basis(1)%d0gb(tab_iq(1),tab_ib(1))*&
-             Basis%tab_basis(2)%d0gb(tab_iq(2),tab_ib(2))*WT*G(iq)
-           !END DO
+
+           WT=1
+           W=1
+
+           DO inb=1,size(Basis%tab_basis)
+
+             WT= WT *Basis%tab_basis(inb)%w(tab_iq(inb))
+             W=W*Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+
+           END DO
+           B(ib)=B(ib)+W*WT*G(iq)
          END DO
        END DO
        Deallocate(Tab_ib)
