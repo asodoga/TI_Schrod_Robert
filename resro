@@ -1,7 +1,3 @@
- + gfortran -c ./src/Op_m.f90  -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=1 -g -fcheck=bounds -fcheck=array-temps -fbacktrace -fcoarray=single -J build/gfortran_2A42023B310FA28D -Ibuild/gfortran_2A42023B310FA28D -o build/gfortran_2A42023B310FA28D/TI_Schrod/src_Op_m.f90.o
- + ar -rs build/gfortran_2A42023B310FA28D/TI_Schrod/libTI_Schrod.a build/gfortran_2A42023B310FA28D/TI_Schrod/src_Op_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_Basis_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_diago_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_UtilLib_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_Molec_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_NDindex_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_NumParameters_m.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/src_psi_m.f90.o
- + gfortran -c app/TI_Schrod.f90  -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=1 -g -fcheck=bounds -fcheck=array-temps -fbacktrace -fcoarray=single -J build/gfortran_2A42023B310FA28D -Ibuild/gfortran_2A42023B310FA28D -o build/gfortran_2A42023B310FA28D/TI_Schrod/app_TI_Schrod.f90.o
- + gfortran  -Wall -Wextra -Wimplicit-interface -fPIC -fmax-errors=1 -g -fcheck=bounds -fcheck=array-temps -fbacktrace -fcoarray=single  build/gfortran_2A42023B310FA28D/TI_Schrod/app_TI_Schrod.f90.o build/gfortran_2A42023B310FA28D/TI_Schrod/libTI_Schrod.a -o build/gfortran_2A42023B310FA28D/app/TI_Schrod
 &BASIS_ND
  NAME="Dp                  ",
  NB_BASIS=2          ,

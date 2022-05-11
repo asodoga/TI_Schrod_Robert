@@ -10,8 +10,6 @@ module Op_m
   TYPE :: Op_t
 
     TYPE (Basis_t),    pointer     :: Basis => Null()
-    TYPE (NDindex_t),  pointer     :: NDindex_q => Null()
-    TYPE (NDindex_t),  pointer     :: NDindex_b => Null()
     real (kind=Rk),    allocatable :: Scalar_g(:) ! The scalar part of the operator (The  for Hamiltonian)
     real (kind=Rk),    allocatable :: RMat(:,:)
 
@@ -183,9 +181,8 @@ contains
   USE Molec_m
    !logical,          parameter         :: debug = .true.
     logical,         parameter          :: debug = .false.
-    logical                             :: Endloop
+    logical                             :: Endloop_q
     integer                             :: tab_iq(2)
-    integer                             :: tab_ind(2)
     integer                             :: iq!,iq1,iq2
     real (kind=Rk), allocatable         :: Q(:)
     TYPE(Op_t),  intent(inout)          :: Op
@@ -206,37 +203,23 @@ contains
 
     IF(allocated(Op%Basis%tab_basis)) THEN
       allocate(Q(size(Op%Basis%tab_basis)))
-      !CALL Init_NDindex(Op%NDindex,NDend=[Op%Basis%tab_basis(1)%nb,&
-      !              Op%Basis%tab_basis(2)%nb],Ndim=2)
-      tab_iq(1)=0
-      tab_iq(2)=1
-      !Call Init_tab_ind(Tab_ind,Op%NDindex)
-      !  Iq=0
-      DO iq=1,Op%Basis%nq
-     !Do
-        IF (tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
-          tab_iq(2) = tab_iq(2) + 1
-          tab_iq(1) = 1
-        ELSE
-          tab_iq(1) = tab_iq(1) + 1
-        END IF
-        !Iq=Iq+1
-        !CALL increase_NDindex(Tab_ind,Op%NDindex,Endloop)
-        !IF (Endloop) exit
-        !Q(1)=Op%Basis%tab_basis(1)%x(tab_ind(1))
-        !Q(2)=Op%Basis%tab_basis(2)%x(tab_ind(2))
+      Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+      Iq=0
+      DO
+        Iq=Iq+1
+        CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+        IF (Endloop_q) exit
         Q(1)=Op%Basis%tab_basis(1)%x(tab_iq(1))
         Q(2)=Op%Basis%tab_basis(2)%x(tab_iq(2))
         Op%Scalar_g(iq)=Calc_pot(Q)
-     END DO
-
-   ELSE
-     allocate( Q(1))
-     DO iq=1,Op%Basis%nq
-       Q = Op%Basis%x(iq)
-       Op%Scalar_g(iq) = Calc_pot(Q)
-     END DO
-   END IF
+      END DO
+    ELSE
+      allocate( Q(1))
+      DO iq=1,Op%Basis%nq
+        Q = Op%Basis%x(iq)
+        Op%Scalar_g(iq) = Calc_pot(Q)
+      END DO
+    END IF
 
    IF (debug) THEN
      write(out_unitp,*)'v', Op%Scalar_g
@@ -257,11 +240,12 @@ USE UtilLib_m
     real (kind=Rk), allocatable         :: opPsi_gg(:,:)
     !logical,          parameter         :: debug = .true.
     logical,         parameter          :: debug = .false.
-    logical                             :: Endloop
+    logical                             :: Endloop_q
+    logical                             :: Endloop_b
     integer                             :: iq,jq1,jq2
-    integer                             :: tab_iq(2)
-    integer                             :: tab_ind(2)
-    integer                             :: tab_ib(2)
+    integer,        allocatable         :: tab_iq(:)
+    integer,        allocatable         :: tab_iq1(:)
+    integer,        allocatable         :: tab_ib(:)
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING OpPsi_grid'
       CALL Write_op(op)
@@ -287,56 +271,39 @@ USE UtilLib_m
 
       Psi_gg(:,:) = reshape(Psi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
       Oppsi_gg(:,:) = reshape(Oppsi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
-      !CALL Init_NDindex(Op%NDindex,NDend=[Op%Basis%tab_basis(1)%nq,&
-      !  Op%Basis%tab_basis(2)%nq],Ndim=size(Op%Basis%tab_basis))
-      tab_iq(1)=0
-      tab_iq(2)=1
-    !  Call Init_tab_ind(Tab_ind,Op%NDindex)
-    !  Iq=0
-    !  Do
-      DO iq=1,Op%Basis%nq
-        IF (tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
-          tab_iq(2)=tab_iq(2)+1
-          tab_iq(1)=1
-        ELSE
-          tab_iq(1)=tab_iq(1)+1
-        END IF
-      !  Iq=Iq+1
-        !CALL increase_NDindex(Tab_ind,Op%NDindex,Endloop)
-        !  IF (Endloop) exit
+
+      Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
+      Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+      Iq=0
+      Do
+        Iq=Iq+1
+        CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+        IF (Endloop_q) exit
         DO jq1 = 1,Op%Basis%tab_basis(1)%nq
           OpPsi_gg(tab_iq(1),tab_iq(2)) = OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass&
            *Op%Basis%tab_basis(1)%d2gg(tab_iq(1),jq1,1,1)*Psi_gg(jq1,tab_iq(2))
-          ! OpPsi_gg(Tab_ind(1),Tab_ind(2)) = OpPsi_gg(Tab_ind(1),Tab_ind(2))-HALF/mass&
-          !  *Op%Basis%tab_basis(1)%d2gg(Tab_ind(1),jq1,1,1)*Psi_gg(jq1,Tab_ind(2))
         END DO
       END DO
-      !CALL Init_NDindex(Op%NDindex,NDend=[Op%Basis%tab_basis(1)%nq,&
-      !  Op%Basis%tab_basis(2)%nq],Ndim=size(Op%Basis%tab_basis))
-      tab_iq(1)=0
-      tab_iq(2)=1
-      !Call Init_tab_ind(Tab_ind,Op%NDindex)
-      !Iq=0
-      !Do
-      DO iq=1,Op%Basis%nq
-        IF(tab_iq(1) == Op%Basis%tab_basis(1)%nq) THEN
-           tab_iq(2) = tab_iq(2) + 1
-           tab_iq(1) = 1
-         ELSE
-           tab_iq(1) = tab_iq(1) + 1
-         END IF
-        !Iq=Iq+1
-        !CALL increase_NDindex(Tab_ind,Op%NDindex,Endloop)
-        !IF (Endloop) exit
+
+      Deallocate(Tab_iq)
+
+      Allocate(Tab_iq1(size(Op%Basis%tab_basis)))
+
+      Call Init_tab_ind(Tab_iq1,Op%Basis%NDindexq)
+      Iq=0
+      DO
+        Iq=Iq+1
+        CALL increase_NDindex(Tab_iq1,Op%Basis%NDindexq,Endloop_q)
+        IF (Endloop_q) exit
 
         DO jq2=1,Op%Basis%tab_basis(2)%nq
-          OpPsi_gg(tab_iq(1),tab_iq(2)) =OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass*&
-          Op%Basis%tab_basis(2)%d2gg(tab_iq(2),jq2,1,1)*Psi_gg(tab_iq(1),jq2)
-        !  OpPsi_gg(Tab_ind(1),Tab_ind(2)) =OpPsi_gg(Tab_ind(1),Tab_ind(2))-HALF/mass*&
-        !  Op%Basis%tab_basis(2)%d2gg(Tab_ind(2),jq2,1,1)*Psi_gg(Tab_ind(1),jq2)
+          OpPsi_gg(tab_iq1(1),tab_iq1(2)) =OpPsi_gg(tab_iq1(1),tab_iq1(2))-HALF/mass*&
+          Op%Basis%tab_basis(2)%d2gg(tab_iq1(2),jq2,1,1)*Psi_gg(tab_iq1(1),jq2)
         END DO
-
       END DO
+
+      Deallocate(Tab_iq1)
 
       Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%nq])
 
