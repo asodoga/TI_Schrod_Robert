@@ -19,7 +19,6 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis functions d2gg(nq,nq,1)
     real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis functions d2gb(nq,nb,1,1)
     real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
-
     TYPE(NDindex_t)              :: NDindexq
     TYPE(NDindex_t)              :: NDindexb
     TYPE (Basis_t),  allocatable :: tab_basis(:)
@@ -138,6 +137,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
    !logical,             parameter      ::debug = .false.
     TYPE(Basis_t),       intent(inout)  :: Basis
     integer,             intent(in)     :: nio
+    integer, allocatable                :: NDend_q(:)
+    integer, allocatable                :: NDend_b(:)
     integer                             :: err_io,nb,nq,i,j,nb_basis
     character (len=Name_len)            :: name
     real(kind=Rk)                       :: A,B,scaleQ,Q0,d0,d2,X1,W1
@@ -174,19 +175,27 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
 
     IF (nb_basis > 1) THEN
       Basis%Basis_name     = 'Dp'
+
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
+
       allocate(Basis%tab_basis(nb_basis))
-      
+      allocate(NDend_q(nb_basis))
+      allocate(NDend_b(nb_basis))
+
       DO i=1,nb_basis
         CALL Read_Basis(Basis%tab_basis(i),nio)
       END DO
       Basis%nb = product(Basis%tab_basis(:)%nb)
       Basis%nq = product(Basis%tab_basis(:)%nq)
 
-      CALL Init_NDindex(Basis%NDindexq,NDend=[Basis%tab_basis(1)%nq,&
-                    Basis%tab_basis(2)%nq],Ndim=size(Basis%tab_basis))
-      CALL Init_NDindex(Basis%NDindexb,NDend=[Basis%tab_basis(1)%nb,&
-                    Basis%tab_basis(2)%nb],Ndim=size(Basis%tab_basis))
+      DO i=1,nb_basis
+        NDend_q(i)=Basis%tab_basis(i)%nq
+        NDend_b(i)=Basis%tab_basis(i)%nb
+      END DO
+
+      CALL Init_NDindex(Basis%NDindexq,NDend_q,nb_basis)
+      CALL Init_NDindex(Basis%NDindexb,NDend_b,nb_basis)
+
     ELSE
       Basis%nb_basis  = nb_basis
       Basis%nb        = nb

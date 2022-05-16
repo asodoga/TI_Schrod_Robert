@@ -10,14 +10,17 @@ PROGRAM TI_Schrod
   TYPE (Basis_t), target :: Basis
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (op_t)            :: Op
-  !TYPE (NDindex_t)       :: NDindex
+!  TYPE (NDindex_t)       :: NDindex
+
+!  CALL Init_NDindex(NDindex,NDend=[2,3,3,2,2,2,3,2,2,4],Ndim=10)
+  !write(out_unitp,*) 'NDindex%Tab0(:)', NDindex%Tab0(:)
+!  CALL Testindex(NDindex)
+!Stop
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
   !====================================================================
-  !CALL Init_NDindex(NDindex,NDend=[6,6],Ndim=2)
-  !CALL Testindex(NDindex)
 
   !write(out_unitp,*) 'Initialization of a real psi'
 

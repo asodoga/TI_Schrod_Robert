@@ -1,3 +1,33 @@
-&basis_nD name='Dp' nb_basis=2     /
-&basis_nD name='herm'   nb=4 nq=6  /
+&basis_nD name='Dp' nb_basis=3    /
+&basis_nD name='herm'   nb=3 nq=10 SCALEQ=  0.6 /
+&basis_nD name='herm'   nb=1 nq=10 SCALEQ=  0.6  /
+&basis_nD name='herm'   nb=3 nq=10 SCALEQ=  0.6 /
+
 &basis_nD name='herm'   nb=3 nq=5 /
+
+
+
+
+
+&basis_nD name='herm'   nb=3 nq=6 SCALEQ=  0.7 /
+&basis_nD name='herm'   nb=3 nq=6 SCALEQ=  0.7  /
+&basis_nD name='herm'   nb=2 nq=6 SCALEQ=  0.7
+eigenvalues =
+ 0.54116640969943830
+ 0.92251130590433894
+  1.6973529106747800
+  1.8594981866650007
+  1.8635296684466605
+  2.0112045492598241
+  2.6892936824245712
+  2.7028971205091810
+  3.1203396921977591
+  3.1312992395177282
+  3.2136522635673099
+  3.3689469527983151
+  4.2782744753496829
+  4.3450384471203733
+  4.5197307478725222
+  4.5970651739738084
+  5.9107008305828836
+  5.9870072436272368
