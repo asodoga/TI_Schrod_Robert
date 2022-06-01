@@ -90,6 +90,7 @@ CONTAINS
 
     Tab_ind(1)=Tab_ind(1)+1
     IF (debug)  write(out_unitp,*)'Tab_indd', Tab_ind
+    
     DO i=1,NDindex%Ndim-1
 
        IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
@@ -102,32 +103,7 @@ CONTAINS
     Endloop =(Tab_ind(NDindex%Ndim)==NDindex%Ndend(NDindex%Ndim)+1)
 
 
-    !IF(Tab_ind(1) == NDindex%Ndend(1)) THEN
-
-     ! IF(Tab_ind(2) == NDindex%Ndend(2)) THEN
-     !  Tab_ind(3)=Tab_ind(3)+1
-     !  Tab_ind(2)=1
-     !  Tab_ind(1)=1
-     ! ELSE
-     !  Tab_ind(2)=Tab_ind(2)+1
-     !  Tab_ind(1)=1
-
-     ! END IF
-
-   ! ELSE
-   !   Tab_ind(1)=Tab_ind(1)+1
-    !END IF
-
-    !Endloop =(Tab_ind(3)>NDindex%Ndend(3))
-    !  IF(Tab_ind(1) == NDindex%Ndend(1)) THEN
-    !    Tab_ind(2)=Tab_ind(2)+1
-    !    Tab_ind(1)=1
-    !  ELSE
-    !    Tab_ind(1)=Tab_ind(1)+1
-    !  END IF
-    !END DO
-
-    !Endloop =(Tab_ind(NDindex%Ndim)>NDindex%Ndend(NDindex%Ndim))
+    
 
     IF (debug) THEN
       write(out_unitp,*) 'END Tab_ind'
