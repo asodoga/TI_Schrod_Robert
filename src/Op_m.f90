@@ -15,8 +15,8 @@ module Op_m
 
   END TYPE Op_t
 
-  public :: Op_t,write_Op,Set_Op,dealloc_Op,calc_OpPsi,TEST_OpPsi_grid,Diago_Op,Make_Mat_Op,OpPsi_grid2D
-  public :: OpPsi_grid3D,OpPsi_grid4D
+  public :: Op_t,write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op,Make_Mat_Op
+  public :: OpPsi_gridnD
 
 contains
   SUBROUTINE alloc_Op(Op,nb)
@@ -161,7 +161,7 @@ contains
     Write(out_unitp,*)
     Write(out_unitp,*)
     Write(out_unitp,*) 'eigenvalues = '
-    DO ib=1,Op%Basis%nb
+    DO ib=1,2!Op%Basis%nb
         write(out_unitp,*) EigenVal(ib)
     END DO
     Write(out_unitp,*)
@@ -235,475 +235,6 @@ contains
      flush(out_unitp)
    END IF
 END SUBROUTINE Potential
-
-SUBROUTINE OpPsi_grid4D(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-  TYPE(Op_t) , intent(inout)          :: Op
-  real (kind=Rk), intent(in) ,pointer :: Psi_g(:)
-  real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-  real (kind=Rk), pointer            :: Psi_gggg(:,:,:,:) => null()
-  real (kind=Rk), allocatable         :: opPsi_gggg(:,:,:,:)
-  !logical,          parameter         :: debug = .true.
-  logical,         parameter          :: debug = .false.
-  logical                             :: Endloop_q
-  logical                             :: Endloop_b
-  integer                             :: iq!,jq1,jq2
-  integer,        allocatable         :: tab_iq(:)
-  integer,        allocatable         :: tab_iq1(:)
-  integer,        allocatable         :: tab_iq2(:)
-  integer,        allocatable         :: tab_ib(:)
-
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING OpPsi_grid3D'
-    CALL Write_op(op)
-    CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-   flush(out_unitp)
-  END IF
-  OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
-Psi_gggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq,1:Op%Basis%tab_basis(3)%nq,1:Op%Basis%tab_basis(4)%nq)=> Psi_g
-
-
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-   OpPsi_g(iq)= OpPsi_g(iq)&
-
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_gggg(:,tab_iq(2) ,  tab_iq(3),tab_iq(4)))&
-     -HALF/mass*dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1),Psi_gggg(tab_iq(1),:,   tab_iq(3),tab_iq(4))) &
-     -HALF/mass*dot_product(Op%Basis%tab_basis(3)%d2gg(tab_iq(3),:,1,1),Psi_gggg(tab_iq(1) ,  tab_iq(2),:,tab_iq(4)))&
-     -HALF/mass*dot_product(Op%Basis%tab_basis(4)%d2gg(tab_iq(4),:,1,1),Psi_gggg(tab_iq(1) ,  tab_iq(2),tab_iq(3),:))
-  END DO
-  Deallocate(Tab_iq)
-  nullify(Psi_gggg)
-
-
-  IF (debug) THEN
-  	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-  	write(out_unitp,*) 'END OpPsi_grid4D'
-  	flush(out_unitp)
-  END IF
-
-END SUBROUTINE OpPsi_grid4D
-
-SUBROUTINE OpPsi_grid5D(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-  TYPE(Op_t),     intent(inout)       :: Op
-  real (kind=Rk), intent(in) ,pointer :: Psi_g(:)
-  real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-  real (kind=Rk), pointer             :: Psi_ggg(:,:,:)
-
-  !logical,          parameter         :: debug = .true.
-  logical,         parameter          :: debug = .false.
-  logical                             :: Endloop_q
-  logical                             :: Endloop_b
-  integer                             :: iq
-  integer,        allocatable         :: tab_iq(:)
-  integer,        allocatable         :: tab_iq1(:)
-  integer,        allocatable         :: tab_iq2(:)
-  integer,        allocatable         :: tab_ib(:)
-
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING OpPsi_grid3D'
-    CALL Write_op(op)
-    CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-   flush(out_unitp)
-  END IF
-  OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
-
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq,1:Op%Basis%tab_basis(3)%nq&
-  *Op%Basis%tab_basis(4)%nq*Op%Basis%tab_basis(5)%nq)=> Psi_g
-
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-     -HALF/mass*dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),&
-     Psi_ggg(:,tab_iq(2) ,  tab_iq(3)*tab_iq(4)*tab_iq(5)))!&
-
-  END DO
-  Deallocate(Tab_iq)
-
-  nullify(Psi_ggg)
-
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq*Op%Basis%tab_basis(2)%nq,1:Op%Basis%tab_basis(3)%nq,&
-  1:Op%Basis%tab_basis(4)%nq*Op%Basis%tab_basis(5)%nq)=> Psi_g
-
-   write(*,*) shape(Psi_ggg(:,:,   :))
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-!write(*,*) shape(Psi_ggg(tab_iq(1)*tab_iq(2),:,  tab_iq(4)*tab_iq(5)))
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1),&
-     Psi_ggg(tab_iq(1)*tab_iq(2),:, tab_iq(4)*tab_iq(5))) !&
-
-  END DO
-  Deallocate(Tab_iq)
-!stop
-  nullify(Psi_ggg)
-
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq*Op%Basis%tab_basis(4)%nq*Op%Basis%tab_basis(5)%nq&
-  ,1:Op%Basis%tab_basis(3)%nq)=> Psi_g
-
-!  write(*,*) shape(Psi_ggg(:,:,   :))
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(3)%d2gg(tab_iq(3),:,1,1),Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(4)*tab_iq(5),:))
-    ! write(*,*) shape(Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(4)*tab_iq(5),:))
-  END DO
-  Deallocate(Tab_iq)
-
-  nullify(Psi_ggg)
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq*Op%Basis%tab_basis(3)%nq*Op%Basis%tab_basis(5)%nq&
-  ,1:Op%Basis%tab_basis(4)%nq)=> Psi_g
-
-  !write(*,*) shape(Psi_ggg(:,:,   :))
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(4)%d2gg(tab_iq(4),:,1,1),Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(3)*tab_iq(5),:))
-    ! write(*,*) shape(Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(3)*tab_iq(5),:))
-  END DO
-  Deallocate(Tab_iq)
-
-  nullify(Psi_ggg)
-
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq*Op%Basis%tab_basis(4)%nq*Op%Basis%tab_basis(3)%nq&
-  ,1:Op%Basis%tab_basis(5)%nq)=> Psi_g
-
-  !write(*,*) shape(Psi_ggg(:,:,   :))
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(5)%d2gg(tab_iq(5),:,1,1),Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(4)*tab_iq(5),:))
-     !write(*,*) shape(Psi_ggg(tab_iq(1) ,  tab_iq(2)*tab_iq(4)*tab_iq(5),:))
-  END DO
-  Deallocate(Tab_iq)
-
-  nullify(Psi_ggg)
-
-  IF (debug) THEN
-  	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-  	write(out_unitp,*) 'END OpPsi_grid3D'
-  	flush(out_unitp)
-  END IF
-
-END SUBROUTINE OpPsi_grid5D
-
-SUBROUTINE OpPsi_grid3D0(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-  TYPE(Op_t),     intent(inout)       :: Op
-  real (kind=Rk), intent(in) ,pointer :: Psi_g(:)
-  real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-  real (kind=Rk), pointer             :: Psi_ggg(:,:,:)
-
-  !logical,          parameter         :: debug = .true.
-  logical,         parameter          :: debug = .false.
-  logical                             :: Endloop_q
-  logical                             :: Endloop_b
-  integer                             :: iq
-  integer,        allocatable         :: tab_iq(:)
-  integer,        allocatable         :: tab_iq1(:)
-  integer,        allocatable         :: tab_iq2(:)
-  integer,        allocatable         :: tab_ib(:)
-
-  IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING OpPsi_grid3D'
-    CALL Write_op(op)
-    CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-   flush(out_unitp)
-  END IF
-  OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
-  Psi_ggg(1:Op%Basis%tab_basis(1)%nq,1:Op%Basis%tab_basis(2)%nq,1:Op%Basis%tab_basis(3)%nq)=> Psi_g
-
-  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-  CALL Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-  Iq=0
-  DO
-   Iq=Iq+1
-   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-   IF (Endloop_q) exit
-
-     OpPsi_g(iq)= OpPsi_g(iq)&
-     -HALF/mass*dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_ggg(:,tab_iq(2) ,  tab_iq(3)))&
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1),Psi_ggg(tab_iq(1),:,   tab_iq(3))) &
-
-     -HALF/mass*dot_product(Op%Basis%tab_basis(3)%d2gg(tab_iq(3),:,1,1),Psi_ggg(tab_iq(1) ,  tab_iq(2),:))
-  END DO
-  Deallocate(Tab_iq)
-
-  nullify(Psi_ggg)
-
-  IF (debug) THEN
-  	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-  	write(out_unitp,*) 'END OpPsi_grid3D'
-  	flush(out_unitp)
-  END IF
-
-END SUBROUTINE OpPsi_grid3D0
-
-SUBROUTINE OpPsi_grid2D(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-    TYPE(Op_t) , intent(inout)          :: Op
-    real (kind=Rk), intent(in)          :: Psi_g(:)
-    real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-    !logical,          parameter         :: debug = .true.
-    logical,         parameter          :: debug = .false.
-    logical                             :: Endloop_q
-    integer                             :: iq,I10,I1f,Step1,I20,I2f,Step2
-    integer,        allocatable         :: tab_iq(:)
-    integer,        allocatable         :: tab_iq1(:)
-    integer,        allocatable         :: tab_ib(:)
-
-    integer,        allocatable         :: I0(:)
-    integer,        allocatable         :: Iff(:)
-    integer,        allocatable         :: Step(:)
-
-    IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING OpPsi_grid2d'
-      CALL Write_op(op)
-      CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-      flush(out_unitp)
-    END IF
-    OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
-
-
-
-    Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-    Allocate(I0(size(Op%Basis%tab_basis)))
-    Allocate(Iff(size(Op%Basis%tab_basis)))
-    Allocate(Step(size(Op%Basis%tab_basis)))
-
-    Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-    Iq=0
-    Do
-      Iq=Iq+1
-      CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-      IF (Endloop_q) exit
-
-
-      I0(1)=(tab_iq(2)-1)*Op%Basis%tab_basis(1)%nq+1
-      Iff(1)=I0(1)+Op%Basis%tab_basis(1)%nq-1
-      Step(1)=1
-
-
-
-      I0(2)=tab_iq(1)
-      Iff(2)= (Op%Basis%tab_basis(1)%nq)*Op%Basis%tab_basis(2)%nq
-      Step(2)=Op%Basis%tab_basis(1)%nq
-
-       OpPsi_g(iq)= OpPsi_g(iq)&
-       -HALF/mass*dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_g(I0(1):Iff(1):Step(1)))&
-
-       -HALF/mass*dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1),Psi_g(I0(2):Iff(2):Step(2)))
-       write(out_unitp,*)iq,' : ',Tab_iq,' I0,Iff,Step',I0,Iff,Step
-    END DO
-    Deallocate(Tab_iq)
-
-
-    IF (debug) THEN
-    	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-    	write(out_unitp,*) 'END OpPsi_grid2D'
-    	flush(out_unitp)
-    END IF
- Stop
-END SUBROUTINE OpPsi_grid2D
-
-
-SUBROUTINE OpPsi_grid2D1(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-    TYPE(Op_t) , intent(inout)          :: Op
-    real (kind=Rk), intent(in)          :: Psi_g(:)
-    real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-    real (kind=Rk), allocatable         :: Psi_gg(:,:)
-    real (kind=Rk), allocatable         :: opPsi_gg(:,:)
-    !logical,          parameter         :: debug = .true.
-    logical,         parameter          :: debug = .false.
-    logical                             :: Endloop_q
-    logical                             :: Endloop_b
-    integer                             :: iq,jq1,jq2
-    integer,        allocatable         :: tab_iq(:)
-    integer,        allocatable         :: tab_iq1(:)
-    integer,        allocatable         :: tab_ib(:)
-
-    IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING OpPsi_grid2d'
-      CALL Write_op(op)
-      CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-      flush(out_unitp)
-    END IF
-    OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
-    Allocate(Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
-    Allocate(OpPsi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
-
-    Psi_gg(:,:) = reshape(Psi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
-
-
-    Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-    Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-    Iq=0
-    Do
-      Iq=Iq+1
-      CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-      IF (Endloop_q) exit
-
-
-       OpPsi_g(iq)= OpPsi_g(iq)&
-      -HALF/mass*dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_gg(:,tab_iq(2)))&
-
-      -HALF/mass*dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq(2),:,1,1),Psi_gg(tab_iq(1),:))
-    END DO
-    Deallocate(Tab_iq)
-
-
-    IF (debug) THEN
-    	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-    	write(out_unitp,*) 'END OpPsi_grid2D'
-    	flush(out_unitp)
-    END IF
-
-END SUBROUTINE OpPsi_grid2D1
-SUBROUTINE OpPsi_grid2D0(OpPsi_g,Psi_g,Op)
-USE Basis_m
-USE Molec_m
-USE UtilLib_m
-    TYPE(Op_t) , intent(inout)          :: Op
-    real (kind=Rk), intent(in)          :: Psi_g(:)
-    real (kind=Rk), intent(inout)       :: OpPsi_g(:)
-    real (kind=Rk), allocatable         :: Psi_gg(:,:)
-    real (kind=Rk), allocatable         :: opPsi_gg(:,:)
-    !logical,          parameter         :: debug = .true.
-    logical,         parameter          :: debug = .false.
-    logical                             :: Endloop_q
-    logical                             :: Endloop_b
-    integer                             :: iq,jq1,jq2
-    integer,        allocatable         :: tab_iq(:)
-    integer,        allocatable         :: tab_iq1(:)
-    integer,        allocatable         :: tab_ib(:)
-
-    IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING OpPsi_grid2d'
-      CALL Write_op(op)
-      CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
-      flush(out_unitp)
-    END IF
-      OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-      Allocate(Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
-      Allocate(OpPsi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
-
-      Psi_gg(:,:) = reshape(Psi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
-      Oppsi_gg(:,:) = reshape(Oppsi_g,shape = [Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq])
-
-      Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-      Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-      Iq=0
-      Do
-        Iq=Iq+1
-        CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-
-        IF (Endloop_q) exit
-
-        OpPsi_gg(tab_iq(1),tab_iq(2)) = OpPsi_gg(tab_iq(1),tab_iq(2))-HALF/mass &
-        *dot_product(Op%Basis%tab_basis(1)%d2gg(tab_iq(1),:,1,1),Psi_gg(:,tab_iq(2)))
-
-      END DO
-      Deallocate(Tab_iq)
-      Allocate(Tab_iq1(size(Op%Basis%tab_basis)))
-      Call Init_tab_ind(Tab_iq1,Op%Basis%NDindexq)
-      Iq=0
-      DO
-        Iq=Iq+1
-        CALL increase_NDindex(Tab_iq1,Op%Basis%NDindexq,Endloop_q)
-        IF (Endloop_q) exit
-
-        OpPsi_gg(tab_iq1(1),tab_iq1(2)) =OpPsi_gg(tab_iq1(1),tab_iq1(2))-HALF/mass &
-        *dot_product(Op%Basis%tab_basis(2)%d2gg(tab_iq1(2),:,1,1),Psi_gg(tab_iq1(1),:))
-
-      END DO
-
-      Deallocate(Tab_iq1)
-      Oppsi_g(:) = reshape(Oppsi_gg,shape=[Op%Basis%nq])
-      IF (debug) THEN
-      	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-      	write(out_unitp,*) 'END OpPsi_grid2D'
-      	flush(out_unitp)
-      END IF
-
-END SUBROUTINE OpPsi_grid2D0
-
 SUBROUTINE OpPsi_grid3DZ(OpPsi_g,Psi_g,Op)
 USE Basis_m
 USE Molec_m
@@ -786,7 +317,7 @@ USE UtilLib_m
 
 END SUBROUTINE OpPsi_grid3DZ
 
-SUBROUTINE OpPsi_grid3D(OpPsi_g,Psi_g,Op)
+SUBROUTINE OpPsi_gridnD(OpPsi_g,Psi_g,Op)
 USE Basis_m
 USE Molec_m
 USE UtilLib_m
@@ -803,7 +334,7 @@ USE UtilLib_m
 
 
   IF (debug) THEN
-    write(out_unitp,*) 'BEGINNING OpPsi_grid3D'
+    write(out_unitp,*) 'BEGINNING OpPsi_gridnD'
     CALL Write_op(op)
     CALL Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
    flush(out_unitp)
@@ -828,26 +359,24 @@ USE UtilLib_m
 
     Psi_ggg(1:Iq1(inb),1:Iq2(inb),1:iq3(inb))  => Psi_g
 
+    d2gg(1:Op%Basis%tab_basis(inb)%nq,1:Op%Basis%tab_basis(inb)%nq)=>Op%Basis%tab_basis(inb)%d2gg
 
+    DO i3=1,ubound(Psi_ggg,dim=3)
+    DO i1=1,ubound(Psi_ggg,dim=1)
 
-   d2gg(1:Op%Basis%tab_basis(inb)%nq,1:Op%Basis%tab_basis(inb)%nq)=>Op%Basis%tab_basis(inb)%d2gg
+      OpPsi_ggg(i1,:,i3) = OpPsi_ggg(i1,:,i3) -HALF/mass* matmul(d2gg,Psi_ggg(i1,:,i3))
 
-   DO i3=1,ubound(Psi_ggg,dim=3)
-   DO i1=1,ubound(Psi_ggg,dim=1)
-
-     OpPsi_ggg(i1,:,i3) = OpPsi_ggg(i1,:,i3) -HALF/mass* matmul(d2gg,Psi_ggg(i1,:,i3))
-
-   END DO
-   END DO
+    END DO
+    END DO
   END DO
 
   IF (debug) THEN
   	CALL Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
-  	write(out_unitp,*) 'END OpPsi_grid3D'
+  	write(out_unitp,*) 'END OpPsi_gridnD'
   	flush(out_unitp)
   END IF
 
-END SUBROUTINE OpPsi_grid3D
+END SUBROUTINE OpPsi_gridnD
 
 
 SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op)
@@ -879,29 +408,8 @@ USE UtilLib_m
 
 
     IF(allocated(Op%Basis%tab_basis)) THEN
-    CALL OpPsi_grid3D(OpPsi_g,Psi_g,Op)
 
-      !IF(Size(Op%Basis%tab_basis)==5) THEN
-
-        !CALL OpPsi_grid5D(OpPsi_g,Psi_g,Op)
-
-      !ELSE IF(Size(Op%Basis%tab_basis)==4) THEN
-
-      !  CALL OpPsi_grid4D(OpPsi_g,Psi_g,Op)
-
-      !ELSE IF(Size(Op%Basis%tab_basis)==3) THEN
-
-      !  CALL OpPsi_grid3D(OpPsi_g,Psi_g,Op)
-
-      !ELSE IF(Size(Op%Basis%tab_basis)==2)  THEN
-
-      !  CALL OpPsi_grid2D(OpPsi_g,Psi_g,Op)
-
-      !ELSE
-
-      !  STOP ' OpPsi_grid STOPED for Overflow  '
-
-      !END IF
+     CALL OpPsi_gridnD(OpPsi_g,Psi_g,Op)
 
     ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
 
@@ -918,103 +426,6 @@ USE UtilLib_m
     END IF
 
   END SUBROUTINE OpPsi_grid
-
-
-
-
-
-  SUBROUTINE TEST_OpPsi_grid(Op)
-  USE Basis_m
-  USE Molec_m
-    TYPE(Op_t) , intent(inout)          :: Op
-    real (kind=Rk),pointer              :: Psi_g(:)
-    real (kind=Rk),allocatable          :: Psi_gg(:,:)
-    real (kind=Rk),allocatable          :: Dif_g(:)
-    real (kind=Rk),allocatable          :: OpPsi_g(:)
-    !logical,          parameter         :: debug = .true.
-    logical,         parameter          :: debug = .false.
-    integer                             :: iq,iq1,iq2
-    real(kind=Rk),    parameter         :: eps = TEN**(-TEN)
-
-    IF (debug) THEN
-      write(out_unitp,*) 'BEGINNING TEST_CALC'
-      CALL write_op(OP)
-      flush(out_unitp)
-    END IF
-
-    IF(allocated(Op%Basis%tab_basis)) THEN
-
-      allocate( Psi_g(Op%Basis%nq))
-      allocate( Psi_gg(Op%Basis%tab_basis(1)%nq,Op%Basis%tab_basis(2)%nq))
-      ! Psi analytic
-        DO iq1=1,Op%Basis%tab_basis(1)%nq
-        DO iq2=1,Op%Basis%tab_basis(2)%nq
-
-           Psi_gg(iq1,iq2)=exp(-HALF*(Op%Basis%tab_basis(1)%x(iq1))**2)*exp(-HALF*(Op%Basis%tab_basis(2)%x(iq2))**2)
-
-        END DO
-        END DO
-       Psi_g(:) = reshape(Psi_gg,shape=[Op%Basis%nq])
-       allocate( OpPsi_g(Op%Basis%nq))
-
-      CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
-
-      DO iq=1,Op%Basis%nq
-        Write(out_unitp,*)iq,OpPsi_g(iq),ONE*Psi_g(iq)
-      END DO
-      allocate( Dif_g(Op%Basis%nq))
-
-      DO iq=1,Op%Basis%nq
-        Dif_g(iq)=ABS(OpPsi_g(iq)-ONE*Psi_g(iq))
-      END DO
-
-      IF (eps.gt.maxval(Dif_g(:)) ) THEN
-        Write(out_unitp,*) 'OpPsi_grid is correct '
-        Write(out_unitp,*) maxval(Dif_g(:))
-      ELSE
-        Write(out_unitp,*) maxval(Dif_g(:))
-        STOP 'OpPsi_grid is not correct'
-      END IF
-
-    ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
-
-      allocate( Psi_g(Op%Basis%nq))
-
-     ! Psi analytic
-
-      DO iq=1,Op%Basis%nq
-        Psi_g(iq)=exp(-HALF*(Op%Basis%x(iq))**TWO)
-      END DO
-
-      allocate( OpPsi_g(Op%Basis%nq))
-
-      CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
-      DO iq=1,Op%Basis%nq
-        Write(out_unitp,*)iq,OpPsi_g(iq),HALF*Psi_g(iq)
-      END DO
-      allocate( Dif_g(Op%Basis%nq))
-
-      DO iq=1,Op%Basis%nq
-        Dif_g(iq)=ABS(OpPsi_g(iq)-HALF*Psi_g(iq))
-      END DO
-
-      IF (eps.gt.maxval(Dif_g(:)) ) THEN
-        Write(out_unitp,*) 'OpPsi_grid is correct '
-        Write(out_unitp,*) maxval(Dif_g(:))
-      ELSE
-        Write(out_unitp,*) maxval(Dif_g(:))
-        STOP 'OpPsi_grid is not correct'
-      END IF
-
-    END IF
-
-    IF (debug) THEN
-    !  CALL Write_RVec(Dif_g,out_unitp,5,name_info='Dif_g')
-      write(out_unitp,*) 'END TEST_CALC'
-      flush(out_unitp)
-    END IF
-
-  END SUBROUTINE TEST_OpPsi_grid
 
   SUBROUTINE calc_OpPsi(Op,Psi,OpPsi)
   USE psi_m, ONLY : psi_t
