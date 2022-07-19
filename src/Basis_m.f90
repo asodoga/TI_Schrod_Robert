@@ -457,14 +457,14 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       write(out_unitp,*)
       S = matmul(d0bgw,Basis%d1gb(:,:,1))
       !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>',Rformat='e13.4')
-      CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
+    !  CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
     END IF
 
     IF (nderiv > 1) THEN
       write(out_unitp,*)
       S = matmul(d0bgw,Basis%d2gb(:,:,1,1))
       !CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d2b>',Rformat='e13.4')
-      CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
+    !  CALL Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
     END IF
   ELSE
     write(out_unitp,*) ' WARNNING in CheckOrtho_Basis'

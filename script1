@@ -1,0 +1,17 @@
+
+for nb in 30 25 20 15 10
+do
+
+  echo nb: $nb$A
+for A in 5 4 3 
+do
+  echo "&basis_nD name='boxAB' nb=$nb nq=30 A=-$A B=$A /" > dat_1D_$nb$A
+
+
+  fpm run --< dat_1D_$nb$A > res_$nb$A
+
+
+  grep "lev 1" res_$nb$A
+
+done
+done

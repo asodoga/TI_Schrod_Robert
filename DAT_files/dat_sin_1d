@@ -1,1 +1,1 @@
-&basis_nD name='boxAB' nb=20 nq=20 A=-5 B=5 /
+&basis_nD name='boxAB' nb=50 nq=100 A=1 B=2.7 /

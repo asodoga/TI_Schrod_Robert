@@ -11,11 +11,18 @@ PROGRAM TI_Schrod
   TYPE (psi_t)           :: psi,Hpsi
   TYPE (op_t)            :: Op
 !  TYPE (NDindex_t)       :: NDindex
+ !==============================================================================
+ ! for QML
+  integer :: ndim,nsurf,option
+  logical :: adiabatic
+  character (len=16)                  :: pot_name
 
-!  CALL Init_NDindex(NDindex,NDend=[2,3,3,2,2,2,3,2,2,4],Ndim=10)
-  !write(out_unitp,*) 'NDindex%Tab0(:)', NDindex%Tab0(:)
-!  CALL Testindex(NDindex)
-!Stop
+  ndim      = 0
+  nsurf     = 0
+  pot_name  = 'read_model'
+  adiabatic = .FALSE.
+  option    = 0
+  CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
