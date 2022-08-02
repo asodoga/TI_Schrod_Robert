@@ -1,0 +1,162 @@
+ begining: max threads?           4
+ pot_name,option: read_model           0
+ ndim,nsurf     :            0           0
+ =================================================
+ =================================================
+ == QML: Quantum Model Lib (E-CAM) ===============
+ == QML version:       9.0                 
+ == QML path:          /home/robert/robert2/CODE_CORECT/QuantumModelLib
+ -------------------------------------------------
+ == Compiled on       "robert-Latitude-E6410" the mar. 26 juil. 2022 - 15:40:07
+ == Compiler:         gfortran
+ == Compiler version: GNU Fortran (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+ == Compiler options: -O5 -g -fbacktrace -fopenmp -funroll-loops -ftree-vectorize -falign-loops=16
+ == Compiler libs:     -llapack -lblas
+ -------------------------------------------------
+ QML is under GNU LGPL3 license and 
+   is written by David Lauvergnat [1]
+   with contributions of
+      Félix MOUHAT [2]
+      Liang LIANG [3]
+      Emanuele MARSILI [1,4]
+
+ [1]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+ [2]: Laboratoire PASTEUR, ENS-PSL-Sorbonne Université-CNRS, France
+ [3]: Maison de la Simulation, CEA-CNRS-Université Paris-Saclay,France
+ [4]: Durham University, Durham, UK
+ =================================================
+ =================================================
+ == Initialization of the Model ==================
+ Reading input file . . .
+ Non-adiabatic potential . . .
+ pot_name_loc: clh2+
+ Non-adiabatic potential . . .
+ PubliUnit=.FALSE., Q:[Rad,Bohr,Bohr], Energy: [Hartree]
+ =================================================
+  Quantum Model
+ -----------------------------------------------
+ Output file for potential library
+ ClH2p current parameters
+
+ ---------------------------------------
+          Internal coordinates          
+                                        
+       H                                
+        \                               
+     R2  \ a                            
+          Cl------------H               
+               R1                       
+                                        
+   Coordinates :                        
+   Q(1) = a          (Radian)           
+   Q(2) = 1/2(R1+R2) (Bohr)             
+   Q(3) = 1/2(R1-R2) (Bohr)             
+                                        
+   V           (Hartree)                
+                                        
+ Ref: unpublished
+ ---------------------------------------
+   PubliUnit:       F
+
+   Option   :                 1
+
+ ---------------------------------------
+                                        
+                                        
+   Level: B3LYP/cc-pVTZ                 
+                                        
+   Minimum:                             
+   Q(1) = a    = 1.6525859462 (Rad)     
+   Q(2) = r+   = 2.4849898659 (Bohr)    
+   Q(3) = r-   = 0.           (Bohr)    
+                                        
+   V = 0.0004486447 Hartree             
+  grad(:) =[ 0.0000558107,-0.0004452755,
+             0.0000000000]              
+  hess    =[0.158044529,0.009093148,0.000000000
+            0.009093148,0.520862288,0.000000000
+            0.000000000,0.000000000,0.511935490]
+                                        
+ ---------------------------------------
+
+ end ClH2p current parameters
+
+ d0GGdef: 1        1.000000000       0.000000000       0.000000000
+ d0GGdef: 2        0.000000000       1.000000000       0.000000000
+ d0GGdef: 3        0.000000000       0.000000000       1.000000000
+
+  Q0:       1.6525859462       2.4849898659       0.0000000000
+
+ -----------------------------------------------
+ Extra action(s):
+ opt F
+ irc F
+ -----------------------------------------------
+ =================================================
+ =================================================
+ Mat_V   4.4864465949788235E-004
+ V   4.4864465949788235E-004
+&BASIS_ND
+ NAME="Dp                  ",
+ NB_BASIS=3          ,
+ NB=0          ,
+ NQ=0          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  1.0000000000000000     ,
+ Q0=  0.0000000000000000     ,
+ /
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=2          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  1.0000000000000000     ,
+ Q0=  0.0000000000000000     ,
+ /
+ S: 1        1.000000000       0.000000000
+ S: 2        0.000000000       1.000000000
+ Sii,Sij   3.1120661603267763E-012   0.0000000000000000     
+
+
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=2          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  1.0000000000000000     ,
+ Q0=  0.0000000000000000     ,
+ /
+ S: 1        1.000000000       0.000000000
+ S: 2        0.000000000       1.000000000
+ Sii,Sij   3.1120661603267763E-012   0.0000000000000000     
+
+
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=2          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  1.0000000000000000     ,
+ Q0=  0.0000000000000000     ,
+ /
+ S: 1        1.000000000       0.000000000
+ S: 2        0.000000000       1.000000000
+ Sii,Sij   3.1120661603267763E-012   0.0000000000000000     
+
+
+ Calc_F11  -2.8000412763884810E-004
+ Calc_F22  -2.8000412763884810E-004
+ Calc_F33  -8.6529765225674206E-005
+ Calc_F21   2.0212709728415317E-006
+ Calc_F13   5.9834281764669454E-006
+ Calc_F23   6.2227650752759510E-006
+ Calc_F1  -5.2553043366245605E-006
+ Calc_F2  -5.0531774321038289E-006
+ Calc_F3  -1.1365864614300623E-006

@@ -4,6 +4,7 @@ PROGRAM TI_Schrod
   USE psi_m
   USE op_m
   USE NDindex_m
+  USE Molec_m
 
   IMPLICIT NONE
 
@@ -13,9 +14,13 @@ PROGRAM TI_Schrod
 !  TYPE (NDindex_t)       :: NDindex
  !==============================================================================
  ! for QML
-  integer :: ndim,nsurf,option
-  logical :: adiabatic
-  character (len=16)                  :: pot_name
+  REAL(kind=Rk), ALLOCATABLE  :: QQML(:)
+  REAL(kind=Rk), ALLOCATABLE  :: Q(:)
+  REAL(kind=Rk), ALLOCATABLE  :: Mat_V(:,:)
+  REAL(kind=Rk)               :: V
+  integer                     :: ndim,nsurf,option
+  logical                     :: adiabatic
+  character (len=16)          :: pot_name
 
   ndim      = 0
   nsurf     = 0
@@ -23,6 +28,19 @@ PROGRAM TI_Schrod
   adiabatic = .FALSE.
   option    = 0
   CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
+  ALLocate(Mat_V(1,1))
+  ALLocate(QQML(3))
+  QQML(:)= [1.6525859462_Rk,2.4849898659_RK,ZERO]
+
+
+  CALL sub_Qmodel_V(Mat_V,QQML)
+  Write(*,*) 'Mat_V',Mat_V
+   ALLocate(Q(3))
+   Q(:)= [2.4849898659_RK,2.4849898659_RK,1.6525859462_Rk]
+   V = Calc_pot(Q)
+   Write(*,*) 'V',V
+
+  !STOP
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module

@@ -1,15 +1,15 @@
 name = "TI_Schrod"
 version = "0.1.0"
 license = "license"
-author = "Robert AFANSOUNOUDJI"
-maintainer = "afankokourobrt@gmail.com"
-copyright = "Copyright 2022, Robert AFANSOUNOUDJI"
+author = "AFANSOUNOUDJI Robert"
+maintainer = "afankokourobert@gmail.com"
+copyright = "Copyright 2022, AFANSOUNOUDJI Robert"
 
 [build]
 auto-executables = true
 auto-tests = true
 auto-examples = true
-link = ["blas", "lapack","arpack2-dev"]
+link = ["blas", "lapack"]
 
 [install]
 library = false

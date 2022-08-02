@@ -1,7 +1,7 @@
-&basis_nD name='Dp' nb_basis=8   /
-&basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1/
-&basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1  /
-&basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1 /
+&basis_nD name='Dp' nb_basis=3   /
+&basis_nD name='herm'   nb=2 nq=4 SCALEQ=  1/
+&basis_nD name='herm'   nb=2 nq=4 SCALEQ=  1  /
+&basis_nD name='herm'   nb=2 nq=4 SCALEQ=  1 /
 &basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1 /
 &basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1 /
 &basis_nD name='herm'   nb=1 nq=2 SCALEQ=  1 /
