@@ -123,243 +123,164 @@ contains
 
   END SUBROUTINE Set_Op
 
-  FUNCTION Calc_F11(Q,massr3)
-   real(kind=Rk)               :: Calc_F11
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
 
+ !!!!!Debut robert!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ SUBROUTINE Tana_F2_F1_Vep(F2,F1,Vep,Q)
 
-   Calc_F11 = -HALF/massr3(1)
-   Write(6,*) 'Calc_F11',Calc_F11
+  real(kind=Rk), intent(in)    :: Q(3)
+  real(kind=Rk), intent(inout) :: F1(3)
+  real(kind=Rk), intent(inout) :: F2(3,3)
+  real(kind=Rk), intent(inout) :: Vep
 
-  END FUNCTION Calc_F11
+  integer :: i,j
 
-  FUNCTION Calc_F22(Q,massr3)
-   real(kind=Rk)               :: Calc_F22
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
+  F2 = 0._Rk
+  F1 = 0._Rk
 
-   Calc_F22 = -HALF/massr3(2)
-   Write(6,*) 'Calc_F22',Calc_F22
+  F2(2,3) = F2(2,3)  +0.00000784383625_Rk * Q(1)**(-1) * sin(Q(3))
+  F1(2)   = F1(2)    +0.00001176575438_Rk * Q(1)**(-1) * cos(Q(3))
+  F2(3,3) = F2(3,3)  +0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))
+  F2(1,2) = F2(1,2)  -0.00001568767251_Rk * cos(Q(3))
+  F1(1)   = F1(1)    +0.00001176575438_Rk * Q(2)**(-1) * cos(Q(3))
+  F2(1,3) = F2(1,3)  +0.00000784383625_Rk * Q(2)**(-1) * sin(Q(3))**(-1)
+  F1(1)   = F1(1)    -0.00000392191813_Rk * Q(2)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
+  F1(3)   = F1(3)    -0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * sin(Q(3))**(-1)
+  F2(1,3) = F2(1,3)  -0.00000784383625_Rk * Q(2)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
+  F1(1)   = F1(1)    +0.00000392191813_Rk * Q(2)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
+  F1(3)   = F1(3)    +0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
+  F2(2,3) = F2(2,3)  +0.00000784383625_Rk * Q(1)**(-1) * sin(Q(3))**(-1)
+  F1(2)   = F1(2)    -0.00000392191813_Rk * Q(1)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
+  F2(2,3) = F2(2,3)  -0.00000784383625_Rk * Q(1)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
+  F1(2)   = F1(2)    +0.00000392191813_Rk * Q(1)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
+  F2(1,3) = F2(1,3)  +0.00000784383625_Rk * Q(2)**(-1) * sin(Q(3))
+  F2(3,3) = F2(3,3)  -0.00028000412764_Rk * Q(1)**(-2)
+  F2(1,1) = F2(1,1)  -0.00028000412764_Rk
+  F2(3,3) = F2(3,3)  -0.00028000412764_Rk * Q(2)**(-2)
+  F2(2,2) = F2(2,2)  -0.00028000412764_Rk
 
-  END FUNCTION Calc_F22
-
-  FUNCTION Calc_F33(Q,massr3)
-   real(kind=Rk)               :: Calc_F33
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-
-   Calc_F33 =  - HALF / (massr3(1) * Q(1)**2)  -  HALF/(massr3(2)*Q(2)**2)&
-          + HALF * cos(Q(3))  * sin(Q(3))  / (massr3(3)*Q(1)*Q(2))&
-          + HALF * cos(Q(3))  / (massr3(3)*Q(1)*Q(2))*sin(Q(3))
-     Write(6,*) 'Calc_F33',Calc_F33
-  END FUNCTION Calc_F33
-
-  FUNCTION Calc_F21(Q,massr3)
-   real(kind=Rk)               :: Calc_F21
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F21 = -cos(Q(3))/massr3(3)
-    Write(6,*) 'Calc_F21',Calc_F21
-  END FUNCTION Calc_F21
-
-  FUNCTION Calc_F13(Q,massr3)
-   real(kind=Rk)               :: Calc_F13
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-
-   Calc_F13 = sin(Q(3))/(massr3(3)*Q(2))
-   Write(6,*) 'Calc_F13',Calc_F13
-
-  END FUNCTION Calc_F13
-
-  FUNCTION Calc_F23(Q,massr3)
-   real(kind=Rk)               :: Calc_F23
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F23 = sin(Q(3))/(massr3(3)*Q(1))
-   Write(6,*) 'Calc_F23',Calc_F23
-
-  END FUNCTION Calc_F23
-
-  FUNCTION Calc_F1(Q,massr3)
-   real(kind=Rk)               :: Calc_F1
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F1 =cos(Q(3))/massr3(3)*Q(2)
-   Write(6,*) 'Calc_F1',Calc_F1
-
-  END FUNCTION Calc_F1
-
-  FUNCTION Calc_F2(Q,massr3)
-   real(kind=Rk)               :: Calc_F2
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F2 = cos(Q(3))/massr3(3)*Q(1)
-   Write(6,*) 'Calc_F2',Calc_F2
-
-  END FUNCTION Calc_F2
-
-  FUNCTION Calc_F3(Q,massr3)
-   real(kind=Rk)               :: Calc_F3
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F3 = -(HALF/(massr3(1)* Q(1)**2)+HALF/(massr3(2)* Q(2)**2))*&
-          (cos(Q(3))/massr3(3)/sin(Q(3))/massr3(3))&
-         +(THREE*(cos(Q(3)))**2-sin(Q(3))) /(TWO*massr3(3)*Q(1)*Q(2))
-      Write(6,*) 'Calc_F3',Calc_F3
-  END FUNCTION Calc_F3
-
-  FUNCTION Calc_F0(Q,massr3)
-   real(kind=Rk)               :: Calc_F0
-   real(kind=Rk), intent(in)   :: Q(:)
-   real(kind=Rk), intent(in)   :: massr3(:)
-
-   Calc_F0 =   ((cos(Q(3)))*sin(Q(3))) /(TWO*massr3(3)*Q(1)*Q(2))&
-         - ((cos(Q(3)))) /(massr3(3)*Q(1)*Q(2))- ((sin(Q(3)))) /&
-          (TWO*massr3(3)*Q(1)*Q(2))- ((cos(Q(3)))) /(massr3(3)*Q(1)*Q(2)*(sin(Q(3))))&
-         + ((cos(Q(3)))**2+(cos(Q(3)))**3) /(TWO*massr3(3)*Q(1)*Q(2)*(sin(Q(3))))
-     Write(6,*) 'Calc_F0',Calc_F0
- END FUNCTION Calc_F0
-
-
-  SUBROUTINE Set_grid_Op(Op)
-  USE Basis_m
-  USE Molec_m
-  USE NDindex_m
-
-   TYPE(Op_t),     intent(inout)       :: Op
-   real(kind=Rk)                       :: massr3(3)
-   real(kind=Rk)                       :: Q(3),F
-   !logical,          parameter         :: debug = .true.
-   logical,         parameter          :: debug = .false.
-   integer                             :: ib,iq
-   logical                             :: Endloop_q
-   logical                             :: Endloop_b
-   integer,         allocatable        :: tab_iq(:)
-
-
-   IF (debug) THEN
-     write(out_unitp,*) 'BEGINNING Set_grid_Op'
-     call write_basis(Op%Basis)
-     flush(out_unitp)
-   END IF
-
-   allocate(Op%Grid(10))
-   allocate(Op%Grid(1)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(2)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(3)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(4)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(5)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(6)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(7)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(8)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(9)%Vec(Op%Basis%nq))
-   allocate(Op%Grid(10)%Vec(Op%Basis%nq))
-
-
-   Op%Grid(1)%DerivIndex(1)  = 1
-   Op%Grid(1)%DerivIndex(2)  = 1
-   Op%Grid(2)%DerivIndex(1)  = 2
-   Op%Grid(2)%DerivIndex(2)  = 2
-   Op%Grid(3)%DerivIndex(1)  = 3
-   Op%Grid(3)%DerivIndex(2)  = 3
-   Op%Grid(4)%DerivIndex(1)  = 1
-   Op%Grid(4)%DerivIndex(2)  = 2
-   Op%Grid(5)%DerivIndex(1)  = 3
-   Op%Grid(5)%DerivIndex(2)  = 1
-   Op%Grid(6)%DerivIndex(1)  = 3
-   Op%Grid(6)%DerivIndex(2)  = 2
-   Op%Grid(7)%DerivIndex(1)  = 1
-   Op%Grid(7)%DerivIndex(2)  = 0
-   Op%Grid(8)%DerivIndex(1)  = 2
-   Op%Grid(8)%DerivIndex(2)  = 0
-   Op%Grid(9)%DerivIndex(1)  = 3
-   Op%Grid(9)%DerivIndex(2)  = 0
-   Op%Grid(10)%DerivIndex(1) = 0
-   Op%Grid(10)%DerivIndex(2) = 0
-
-
-   CALL Set_mass(massr3)
-   Q(:)=[2.5, 2.6, 1.7]
-   F= Calc_F11(Q,massr3)
-   F= Calc_F22(Q,massr3)
-   F= Calc_F33(Q,massr3)
-   F= Calc_F21(Q,massr3)
-   F= Calc_F13(Q,massr3)
-   F= Calc_F23(Q,massr3)
-   F= Calc_F1(Q,massr3)
-   F= Calc_F2(Q,massr3)
-   F= Calc_F3(Q,massr3)
-
-  ! Write(6,*) "f33",F
-STOP
-
-   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-   Iq=0
-   DO
-    Iq=Iq+1
-    CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-    IF (Endloop_q) exit
-
-    Q(1) =  Op%Basis%tab_basis(1)%x(tab_iq(1))
-    Q(2) =  Op%Basis%tab_basis(2)%x(tab_iq(2))
-    Q(3) =  Op%Basis%tab_basis(3)%x(tab_iq(3))
-
-    Op%Grid(1)%Vec(Iq)  = Calc_F11(Q,massr3) !-HALF/massr3(1)
-    Op%Grid(2)%Vec(Iq)  = Calc_F22(Q,massr3) !-HALF/massr3(2)
-
-    Op%Grid(3)%Vec(Iq)  = Calc_F33(Q,massr3) !-HALF/(massr3(1)*Q(1)**2) - HALF/(massr3(2)*Q(2)**2)&
-                 !+ HALF*cos(Q(3))*sin(Q(3))/(massr3(3)*Q(1)*Q(2))&
-                 !+HALF*cos(Q(3))/ (massr3(3)*Q(1)*Q(2))*sin(Q(3))
-
-
-    Op%Grid(4)%Vec(Iq)  = Calc_F21(Q,massr3) ! -cos(Q(3))/massr3(3)
-
-    Op%Grid(5)%Vec(Iq)  = Calc_F13(Q,massr3) !sin(Q(3))/massr3(3)*Q(2)
-
-    Op%Grid(6)%Vec(Iq)  =  Calc_F23(Q,massr3) !sin(Q(3))/massr3(3)*Q(1)
-
-    Op%Grid(7)%Vec(Iq)  = Calc_F1(Q,massr3) ! cos(Q(3))/massr3(3)*Q(2)
-
-    Op%Grid(8)%Vec(Iq)  = Calc_F2(Q,massr3)   !cos(Q(3))/massr3(3)*Q(1)
-
-    Op%Grid(9)%Vec(Iq)  =  Calc_F3(Q,massr3) !-(HALF/(massr3(1)* Q(1)**2)+HALF/(massr3(2)* Q(2)**2))*&
-                 !(cos(Q(3))/massr3(3)/sin(Q(3))/massr3(3))&
-                 !+(THREE*(cos(Q(3)))**2-sin(Q(3))) /(TWO*massr3(3)*Q(1)*Q(2))
-
-    Op%Grid(10)%Vec(Iq) =  Calc_F0(Q,massr3) !((cos(Q(3)))*sin(Q(3))) /(TWO*massr3(3)*Q(1)*Q(2))&
-
-                !- ((cos(Q(3)))) /(massr3(3)*Q(1)*Q(2))- ((sin(Q(3)))) /&
-                 !(TWO*massr3(3)*Q(1)*Q(2))- ((cos(Q(3)))) /&
-                ! (massr3(3)*Q(1)*Q(2)*(sin(Q(3))))&
-                !+((cos(Q(3)))**2+(cos(Q(3)))**3) /&
-                 !(TWO*massr3(3)*Q(1)*Q(2)*(sin(Q(3))))
-
+  DO i=1,3
+   DO j=i+1,3
+    F2(j,i) = F2(i,j)
    END DO
+  END DO
+
+  Vep = 0._Rk
+  Vep = Vep -0.00000784383625_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))
+  Vep = Vep -0.00000392191813_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
+  Vep = Vep +0.00000784383625_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
+  Vep = Vep -0.00014000206382_Rk * Q(1)**(-2)
+  Vep = Vep -0.00007000103191_Rk * Q(1)**(-2) * cos(Q(3))**(2)*sin(Q(3))**(-2)
+  Vep = Vep -0.00014000206382_Rk * Q(2)**(-2)
+  Vep = Vep -0.00007000103191_Rk * Q(2)**(-2) * cos(Q(3))**(2)*sin(Q(3))**(-2)
+
+ END SUBROUTINE Tana_F2_F1_Vep
+
+ SUBROUTINE Set_grid_Op(Op)
+ USE Basis_m
+ USE Molec_m
+ USE NDindex_m
+
+  TYPE(Op_t),     intent(inout)       :: Op
+  real(kind=Rk)                       :: massr3(3)
+  real(kind=Rk)                       :: Q(3),F,F2(3,3),F1(3),Vep
+  !logical,          parameter         :: debug = .true.
+  logical,         parameter          :: debug = .false.
+  integer                             :: ib,iq
+  logical                             :: Endloop_q
+  logical                             :: Endloop_b
+  integer,         allocatable        :: tab_iq(:)
 
 
+  IF (debug) THEN
+    write(out_unitp,*) 'BEGINNING Set_grid_Op'
+    call write_basis(Op%Basis)
+    flush(out_unitp)
+  END IF
+
+  allocate(Op%Grid(14))
+  allocate(Op%Grid(1)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(2)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(3)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(4)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(5)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(6)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(7)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(8)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(9)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(10)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(11)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(12)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(13)%Vec(Op%Basis%nq))
+  allocate(Op%Grid(14)%Vec(Op%Basis%nq))
+
+  Op%Grid(1)%DerivIndex(1)  = 0
+  Op%Grid(1)%DerivIndex(2)  = 0
+  Op%Grid(2)%DerivIndex(1)  = 1
+  Op%Grid(2)%DerivIndex(2)  = 1
+  Op%Grid(3)%DerivIndex(1)  = 1
+  Op%Grid(3)%DerivIndex(2)  = 2
+  Op%Grid(4)%DerivIndex(1)  = 1
+  Op%Grid(4)%DerivIndex(2)  = 3
+  Op%Grid(5)%DerivIndex(1)  = 2
+  Op%Grid(5)%DerivIndex(2)  = 1
+  Op%Grid(6)%DerivIndex(1)  = 2
+  Op%Grid(6)%DerivIndex(2)  = 2
+  Op%Grid(7)%DerivIndex(1)  = 2
+  Op%Grid(7)%DerivIndex(2)  = 3
+  Op%Grid(8)%DerivIndex(1)  = 3
+  Op%Grid(8)%DerivIndex(2)  = 1
+  Op%Grid(9)%DerivIndex(1)  = 3
+  Op%Grid(9)%DerivIndex(2)  = 2
+  Op%Grid(10)%DerivIndex(1) = 3
+  Op%Grid(10)%DerivIndex(2) = 3
+
+  Op%Grid(11)%DerivIndex(1) = 1
+  Op%Grid(11)%DerivIndex(2) = 0
+  Op%Grid(12)%DerivIndex(1) = 2
+  Op%Grid(12)%DerivIndex(2) = 0
+  Op%Grid(13)%DerivIndex(1) = 3
+  Op%Grid(13)%DerivIndex(2) = 0
+  Op%Grid(14)%DerivIndex(1) = 0
+  Op%Grid(14)%DerivIndex(2) = 0
 
 
-   IF (debug) THEN
-     write(out_unitp,*) 'END Set_drid_Op'
-     flush(out_unitp)
-   END IF
+  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+  Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+  Iq=0
+  DO
+   Iq=Iq+1
+   CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+   IF (Endloop_q) exit
 
+   Q(1) =  Op%Basis%tab_basis(1)%x(tab_iq(1))
+   Q(2) =  Op%Basis%tab_basis(2)%x(tab_iq(2))
+   Q(3) =  Op%Basis%tab_basis(3)%x(tab_iq(3))
+
+
+   Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
+   Op%Grid(1)%Vec(Iq)  = Calc_pot(Q)
+   Op%Grid(2)%Vec(Iq)  = F2(1,1)
+   Op%Grid(3)%Vec(Iq)  = F2(1,2)
+   Op%Grid(4)%Vec(Iq)  = F2(1,3)
+   Op%Grid(5)%Vec(Iq)  = F2(2,1)
+   Op%Grid(6)%Vec(Iq)  = F2(2,2)
+   Op%Grid(7)%Vec(Iq)  = F2(2,3)
+   Op%Grid(8)%Vec(Iq)  = F2(3,1)
+   Op%Grid(9)%Vec(Iq)  = F2(3,2)
+   Op%Grid(10)%Vec(Iq) = F2(3,3)
+   Op%Grid(11)%Vec(Iq) = F1(1)
+   Op%Grid(12)%Vec(Iq) = F1(2)
+   Op%Grid(13)%Vec(Iq) = F1(3)
+   Op%Grid(14)%Vec(Iq) = Vep
+
+  END DO
+
+  IF (debug) THEN
+    write(out_unitp,*) 'END Set_drid_Op'
+    flush(out_unitp)
+  END IF
  END SUBROUTINE Set_grid_op
-
-
-
-
-
+ !!!!!!!!!!!!!!!!!!!!!fin robert!!!!!!!!!!!!!!!!!!!!!!!!!!
 
  SUBROUTINE Make_Mat_OP(Op)
   USE Basis_m
@@ -404,8 +325,6 @@ STOP
 
   SUBROUTINE Diago_Op(Op)
   USE Basis_m
-  USE Molec_m
-
     TYPE(Op_t),     intent(inout)       :: Op
     !logical,          parameter         :: debug = .true.
     logical,         parameter          ::debug = .false.
@@ -423,14 +342,14 @@ STOP
     Write(out_unitp,*)
     Write(out_unitp,*)
     Write(out_unitp,*) 'eigenvalues = '
-    DO ib=1,Op%Basis%nb
-        write(out_unitp,*) EigenVal(ib)
-        !write(out_unitp,*) EigenVal(ib)*219474.631443_RK
+    DO ib=1,5!Op%Basis%nb
+        !write(out_unitp,*) EigenVal(ib)
+        write(out_unitp,*) EigenVal(ib)*219474.631443_RK
     END DO
     Write(out_unitp,*)
     Write(out_unitp,*)
     DO ib=1,Op%Basis%nb
-        write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
+      write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
     END DO
 
     IF (debug) THEN
@@ -494,10 +413,10 @@ STOP
    END IF
  END SUBROUTINE Potential
 
-  SUBROUTINE KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)
-  USE Basis_m
-  USE Molec_m
-  USE UtilLib_m
+ SUBROUTINE KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)
+ USE Basis_m
+ USE Molec_m
+ USE UtilLib_m
    TYPE(Op_t),     intent(in),target   :: Op
    real (kind=Rk), intent(in)          :: Psi_g(:)
    real (kind=Rk), intent(inout),target:: OpPsi_g(:)
@@ -817,8 +736,8 @@ USE UtilLib_m
    flush(out_unitp)
  END IF
 
- OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-
+ !OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
+ OpPsi_g = 0._Rk
  DO iterm=1,size(Op%Grid)
 
    inq1 = Op%Grid(iterm)%DerivIndex(1)
@@ -912,6 +831,8 @@ SUBROUTINE OpPsi_gridnD(OpPsi_g,Psi_g,Op)
    real (kind=Rk), intent(inout)       :: OpPsi_g(:)
    !logical,          parameter         :: debug = .true.
    logical,         parameter          :: debug = .false.
+   logical,         parameter          :: curv = .true.
+   logical,         parameter          :: simple = .false.
 
 
    IF (debug) THEN
@@ -921,20 +842,20 @@ SUBROUTINE OpPsi_gridnD(OpPsi_g,Psi_g,Op)
       flush(out_unitp)
    END IF
 
-   IF (.NOT.allocated(Op%Scalar_g)) THEN
-
-    allocate(Op%Scalar_g(Op%Basis%nq))
-
-    CALL Potential(Op)
-
-   END IF
 
 
-  IF(allocated(Op%Basis%tab_basis)) THEN
-    CALL OpPsi_gridcnD(OpPsi_g,Psi_g,Op)
-     !CALL OpPsi_gridnD(OpPsi_g,Psi_g,Op)
 
-  ELSE IF( Basis_IS_allocated(Op%Basis)) THEN
+  IF (allocated(Op%Basis%tab_basis)) THEN
+    IF (curv) THEN
+      CALL OpPsi_gridcnD(OpPsi_g,Psi_g,Op)
+    ELSE IF (Simple) THEN
+      IF (.NOT.allocated(Op%Scalar_g)) THEN
+        ALLOCATE(Op%Scalar_g(Op%Basis%nq))
+        CALL Potential(Op)
+      END IF
+      CALL OpPsi_gridnD(OpPsi_g,Psi_g,Op)
+    END IF
+  ELSE IF (Basis_IS_allocated(Op%Basis)) THEN
 
     OpPsi_g(:) = Op%Scalar_g(:) * Psi_g(:)
 
