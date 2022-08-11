@@ -1,3 +1,29 @@
+!===============================================================================
+!  This file is part of TI_Schrod_Robert.
+!
+!  TI_Schrod_Robert is a free software: you can redistribute it and/or modify
+!  it under the terms of the GNU Lesser General Public License as published by
+!  the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
+!
+!  TI_Schrod_Robert is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU Lesser General Public License for more details.
+!
+!   You should have received a copy of the GNU Lesser General Public License
+!   along with TI_Schrod_Robert.  If not, see <http://www.gnu.org/licenses/>.
+!
+!   Copyright 2022 Robert AFANSOUNOUDJI [1]
+
+!     with contributions of:
+!     Komi SODOGA      [1]
+!     David Lauvergnat [2]
+![1]:Laboratoire de Physique des Matériaux et des Composants
+!à Semi-Conducteurs (LPMCS), UNIVERSITÉ DE LOME
+![2]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+
+!===============================================================================
 MODULE Basis_m
   USE NumParameters_m
   USE NDindex_m
@@ -478,8 +504,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     !logical,           parameter     :: debug = .true.
     logical,          parameter      :: debug = .false.
     TYPE(Basis_t),     intent(in)    :: Basis
-    real(kind=Rk),     intent(in)    :: B(:)
-    real(kind=Rk),     intent(inout) :: G(:)
+    real(kind=Rk),     intent(in)    :: B(:) !Vector on base,
+    real(kind=Rk),     intent(inout) :: G(:) !Vector on the grid, out
     real(kind=Rk)                    :: W
     logical                          :: Endloop_q
     logical                          :: Endloop_b
@@ -531,20 +557,20 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
        Ib=Ib+1
        CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
        IF (Endloop_b) exit
-       W=ONE
+       W = ONE
        DO inb=1,size(Basis%tab_basis)
-        W=W* Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+        W = W * Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
        END DO
-       G(iq) =G(iq)+W*B(ib)
+       G(iq) = G(iq) + W * B(ib)
       END DO
      END DO
      Deallocate(Tab_ib)
      Deallocate(Tab_iq)
     ELSE
-     DO iq=1,Basis%nq
-      G(iq)=ZERO
-      DO ib=1,Basis%nb
-       G(iq)= G(iq)+Basis%d0gb(iq,ib)*B(ib)
+     DO iq = 1,Basis%nq
+      G(iq) = ZERO
+      DO ib = 1,Basis%nb
+       G(iq) = G(iq) + Basis%d0gb(iq,ib) * B(ib)
       END DO
      END DO
     END IF
@@ -561,8 +587,8 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
     !logical,          parameter     :: debug = .true.
     logical,         parameter      :: debug = .false.
     TYPE(Basis_t),    intent(in)    :: Basis
-    real(kind=Rk),    intent(in)    :: G(:)
-    real(kind=Rk),    intent(inout) :: B(:)
+    real(kind=Rk),    intent(in)    :: G(:) !Vector on the grid, at the entrance
+    real(kind=Rk),    intent(inout) :: B(:) !Vector on base, out
     logical                         :: Endloop_q
     logical                         :: Endloop_b
     real(kind=Rk)                   :: WT,W
@@ -602,34 +628,34 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
      Allocate(Tab_ib(size(Basis%tab_basis)))
      Allocate(Tab_iq(size(Basis%tab_basis)))
      Call Init_tab_ind(Tab_ib,Basis%NDindexb)
-     Ib=0
+     Ib = 0
      DO
-      Ib=Ib+1
+      Ib = Ib+1
       CALL increase_NDindex(Tab_ib,Basis%NDindexb,Endloop_b)
       IF (Endloop_b) exit
-      B(ib)=ZERO
+      B(ib) = ZERO
       Call Init_tab_ind(Tab_iq,Basis%NDindexq)
-      Iq=0
+      Iq = 0
       DO
-        Iq=Iq+1
+        Iq = Iq+1
         CALL increase_NDindex(Tab_iq,Basis%NDindexq,Endloop_q)
         IF (Endloop_q) exit
-        WT=1
-        W=1
-        DO inb=1,size(Basis%tab_basis)
-         WT= WT *Basis%tab_basis(inb)%w(tab_iq(inb))
-         W=W*Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
+        WT = 1
+        W  = 1
+        DO inb = 1,size(Basis%tab_basis)
+         WT = WT * Basis%tab_basis(inb)%w(tab_iq(inb))
+         W  = W  * Basis%tab_basis(inb)%d0gb(tab_iq(inb),tab_ib(inb))
         END DO
-        B(ib)=B(ib)+W*WT*G(iq)
+        B(ib) = B(ib) + W * WT * G(iq)
       END DO
      END DO
      Deallocate(Tab_ib)
      Deallocate(Tab_iq)
     ELSE
-     DO ib=1,Basis%nb
-       B(ib)=ZERO
-       DO iq=1,Basis%nq
-         B(ib)=B(ib)+Basis%d0gb(iq,ib)*Basis%w(iq)*G(iq)
+     DO ib = 1,Basis%nb
+       B(ib) = ZERO
+       DO iq = 1,Basis%nq
+         B(ib) = B(ib) + Basis%d0gb(iq,ib) * Basis%w(iq) * G(iq)
        END DO
      END DO
     END IF

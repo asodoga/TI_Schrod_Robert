@@ -1,3 +1,29 @@
+!===============================================================================
+!  This file is part of TI_Schrod_Robert.
+!
+!  TI_Schrod_Robert is a free software: you can redistribute it and/or modify
+!  it under the terms of the GNU Lesser General Public License as published by
+!  the Free Software Foundation, either version 3 of the License, or
+!   (at your option) any later version.
+!
+!  TI_Schrod_Robert is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU Lesser General Public License for more details.
+!
+!   You should have received a copy of the GNU Lesser General Public License
+!   along with TI_Schrod_Robert.  If not, see <http://www.gnu.org/licenses/>.
+!
+!   Copyright 2022 Robert AFANSOUNOUDJI [1]
+
+!     with contributions of:
+!     Komi SODOGA      [1]
+!     David Lauvergnat [2]
+![1]:Laboratoire de Physique des Matériaux et des Composants
+!à Semi-Conducteurs (LPMCS), UNIVERSITÉ DE LOME
+![2]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+
+!===============================================================================
 MODULE NDindex_m
   USE NumParameters_m
   USE UtilLib_m
@@ -39,14 +65,13 @@ CONTAINS
       write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
       write(out_unitp,*)'NDindex%Tab0', NDindex%Tab0(:)
       write(out_unitp,*) 'END Init_NDindex'
-
       flush(out_unitp)
     END IF
 
   END SUBROUTINE Init_NDindex
 
   SUBROUTINE Init_tab_ind(Tab_ind,NDindex)
-    USE UtilLib_m
+  USE UtilLib_m
     IMPLICIT NONE
     TYPE(NDindex_t),  intent(in) :: NDindex
     integer,     intent(inout)   :: Tab_ind(:)
@@ -90,7 +115,7 @@ CONTAINS
 
     Tab_ind(1)=Tab_ind(1)+1
     IF (debug)  write(out_unitp,*)'Tab_indd', Tab_ind
-    
+
     DO i=1,NDindex%Ndim-1
 
        IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
@@ -103,7 +128,7 @@ CONTAINS
     Endloop =(Tab_ind(NDindex%Ndim)==NDindex%Ndend(NDindex%Ndim)+1)
 
 
-    
+
 
     IF (debug) THEN
       write(out_unitp,*) 'END Tab_ind'

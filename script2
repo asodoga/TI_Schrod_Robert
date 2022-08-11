@@ -1,19 +1,38 @@
+&potential
+  pot_name='ClH2+' ! potential surface name
+  option=1
+   /
+   ./TI_Schrod.x
+   &basis_nD name='Dp' nb_basis=3   /
+
+   &basis_nD name='herm'   nb=2 nq=4 SCALEQ=  7/
+   &basis_nD name='herm'   nb=2 nq=4 SCALEQ=  7  /
+   &basis_nD name='herm'   nb=2 nq=4 SCALEQ=  6 /
+
+
+
+
+
+
+
+
+
 #for nb in 30 25 20 15 10
 #do
 
  # echo nb: $nb
  #for SCALEQ in 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3
-for SCALEQ in  2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9
-do
-  echo "&basis_nD name='herm'   nb=3 nq=30 SCALEQ=$SCALEQ Q0=0/" > dat_1Dh_3$SCALEQ 
+#for SCALEQ in  2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9
+#do
+#  echo "&basis_nD name='herm'   nb=3 nq=30 SCALEQ=$SCALEQ Q0=0/" > dat_1Dh_3$SCALEQ
 
-#echo "&basis_nD name='herm'   nb=$nb nq=30 SCALEQ=$SCALEQ Q0=0/" > dat_1Dh_$nb$SCALEQ 
+#echo "&basis_nD name='herm'   nb=$nb nq=30 SCALEQ=$SCALEQ Q0=0/" > dat_1Dh_$nb$SCALEQ
 
   #fpm run --< dat_1Dh_$nb$SCALEQ  > res_h15$SCALEQ
-  
-  fpm run --< dat_1Dh_3$SCALEQ  > res_h3$SCALEQ
+
+  #fpm run --< dat_1Dh_3$SCALEQ  > res_h3$SCALEQ
 
   #grep "lev 1" res_h$nb$SCALEQ
 
 #done
-done
+#done
