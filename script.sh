@@ -9,4 +9,4 @@ rm -r build
 fpm build --flag  "-fopenmp"
 gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schrod.a $QMLDIR/libpot.a $ADDIR/libAD_dnSVM.a -lblas -llapack
 
-./TI_Schrod.x < DAT_files/Dat_test_QML > Resu54123
+./TI_Schrod.x < DAT_files/Dat_test_QML > Reread

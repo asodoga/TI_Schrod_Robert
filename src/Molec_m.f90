@@ -39,8 +39,14 @@ module Molec_m
   real(kind=Rk) :: Re = 1.73290_RK
   real(kind=Rk) :: alpha1 = 1.1741_RK
   logical       :: QML=.True.
+  TYPE Molec_t
+       real (kind=Rk)      :: V0 ! le fond du puits
+       character(len=:), allocatable  :: sym_type !type of symmetry
+       character(len=:), allocatable  :: name_coord ! name of coord
+  END TYPE Molec_t
 
-  public :: Calc_pot,Set_mass,mass,mass3
+
+  public :: Calc_pot,Set_mass,mass,mass3,Molec_t
 
 
   contains
@@ -78,6 +84,42 @@ module Molec_m
 
   END SUBROUTINE Set_mass
 
+  SUBROUTINE Read_option_pot(Molec,ni)
+  USE UtilLib_m
+    logical,             parameter      :: debug = .true.
+    !logical,             parameter      ::debug = .false.
+    REAL(kind=Rk)                       :: V0
+    integer,             intent(in)     :: ni
+    TYPE(Molec_t),       intent(inout)  :: Molec
+    integer                             :: err_io
+    character (len=Name_len)            :: name_coord,sym_type
+
+
+    NAMELIST /pot/ name_coord,sym_type,V0
+    name_coord    = 'simple'
+    sym_type      = 'sym'
+    V0            = Zero
+
+    IF (debug) THEN
+      write(out_unitp,*)'Read_option_pot'
+      write(out_unitp,*)V0,name_coord,sym_type
+      flush(out_unitp)
+    END IF
+
+    Read(ni,nml=pot,IOSTAT=err_io)
+    write(out_unitp,nml=pot)
+    Molec%V0         = V0
+    Molec%name_coord = name_coord
+    Molec%sym_type   = sym_type
+
+    write(out_unitp,*)V0,name_coord,sym_type
+
+    IF (debug) THEN
+      write(out_unitp,*) 'Read_option_pot'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE Read_option_pot
 
 
   FUNCTION Calc_pot(Q)

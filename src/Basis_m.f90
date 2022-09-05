@@ -47,6 +47,7 @@ MODULE Basis_m
     real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis functions d2gg(nq,nq,1,1)
     TYPE(NDindex_t)              :: NDindexq
     TYPE(NDindex_t)              :: NDindexb
+
     TYPE (Basis_t),  allocatable :: tab_basis(:)
   END TYPE Basis_t
 

@@ -380,16 +380,21 @@ contains
    Write(out_unitp,*) 'eigenvalues = '
 
    DO ib=1,5!Op%Basis%nb
-     !write(out_unitp,*) EigenVal(ib)
-     write(out_unitp,*) ib,EigenVal(ib)*219474.631443_RK
+     !write(out_unitp,*) ib,EigenVal(ib)
+     !write(out_unitp,*) ib,(EigenVal(ib)-0.0004486447_Rk)*219474.631443_RK !!option 1 clH2P
+     !write(out_unitp,*) ib,(EigenVal(ib)-0.0004486447_Rk)*219474.631443_RK !!option 2 clH2P
+     !write(out_unitp,*) ib,(EigenVal(ib)+461.0632775273_Rk)*219474.631443_RK !!option 3 clH2P
+     !write(out_unitp,*) ib,(EigenVal(ib)+461.0632775273_Rk)*219474.631443_RK !!option 4 clH2P
+     write(out_unitp,*) ib,(EigenVal(ib)+460.5905268800_Rk)*219474.631443_RK ! option 5 clH2P
+     !write(out_unitp,*) ib,(EigenVal(ib)+460.5905268800_Rk)*219474.631443_RK ! option 6 clH2P
    END DO
 
    Write(out_unitp,*)
    Write(out_unitp,*)
 
-   DO ib=1,Op%Basis%nb
-     write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
-   END DO
+  ! DO ib=1,Op%Basis%nb
+   !  write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
+   !END DO
 
    Deallocate(EigenVal)
    Deallocate(EigenVec)
