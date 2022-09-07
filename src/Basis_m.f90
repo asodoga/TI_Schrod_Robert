@@ -230,7 +230,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
       Basis%Basis_name     = trim(adjustl(name))
       CALL string_uppercase_TO_lowercase(Basis%Basis_name)
 
-    SELECT CASE (Basis%Basis_name)
+      SELECT CASE (Basis%Basis_name)
       CASE ('boxab')
       CALL Construct_Basis_Sin(Basis)
       Q0      = A

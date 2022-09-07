@@ -28,6 +28,7 @@ module Op_m
   USE NumParameters_m
   USE diago_m
   USE NDindex_m
+  USE Molec_m
   USE Basis_m, only : Basis_t
 
   implicit none
@@ -151,57 +152,6 @@ contains
 
  END SUBROUTINE Set_Op
 
-
- SUBROUTINE Tana_F2_F1_Vep(F2,F1,Vep,Q)
-
-  real(kind=Rk), intent(in)    :: Q(3)
-  real(kind=Rk), intent(inout) :: F1(3)
-  real(kind=Rk), intent(inout) :: F2(3,3)
-  real(kind=Rk), intent(inout) :: Vep
-
-  integer :: i,j
-
-  F2 = 0._Rk
-  F1 = 0._Rk
-
-  F2(2,3) = F2(2,3)  +0.00000784383625_Rk * Q(1)**(-1) * sin(Q(3))
-  F1(2)   = F1(2)    +0.00001176575438_Rk * Q(1)**(-1) * cos(Q(3))
-  F2(3,3) = F2(3,3)  +0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))
-  F2(1,2) = F2(1,2)  -0.00001568767251_Rk * cos(Q(3))
-  F1(1)   = F1(1)    +0.00001176575438_Rk * Q(2)**(-1) * cos(Q(3))
-  F2(1,3) = F2(1,3)  +0.00000784383625_Rk * Q(2)**(-1) * sin(Q(3))**(-1)
-  F1(1)   = F1(1)    -0.00000392191813_Rk * Q(2)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
-  F1(3)   = F1(3)    -0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * sin(Q(3))**(-1)
-  F2(1,3) = F2(1,3)  -0.00000784383625_Rk * Q(2)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
-  F1(1)   = F1(1)    +0.00000392191813_Rk * Q(2)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
-  F1(3)   = F1(3)    +0.00001568767251_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
-  F2(2,3) = F2(2,3)  +0.00000784383625_Rk * Q(1)**(-1) * sin(Q(3))**(-1)
-  F1(2)   = F1(2)    -0.00000392191813_Rk * Q(1)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
-  F2(2,3) = F2(2,3)  -0.00000784383625_Rk * Q(1)**(-1) * cos(Q(3))**(2)*sin(Q(3))**(-1)
-  F1(2)   = F1(2)    +0.00000392191813_Rk * Q(1)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
-  F2(1,3) = F2(1,3)  +0.00000784383625_Rk * Q(2)**(-1) * sin(Q(3))
-  F2(3,3) = F2(3,3)  -0.00028000412764_Rk * Q(1)**(-2)
-  F2(1,1) = F2(1,1)  -0.00028000412764_Rk
-  F2(3,3) = F2(3,3)  -0.00028000412764_Rk * Q(2)**(-2)
-  F2(2,2) = F2(2,2)  -0.00028000412764_Rk
-
-  DO i=1,3
-   DO j=i+1,3
-    F2(j,i) = F2(i,j)
-   END DO
-  END DO
-
-  Vep = 0._Rk
-  Vep = Vep -0.00000784383625_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))
-  Vep = Vep -0.00000392191813_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))**(3)*sin(Q(3))**(-2)
-  Vep = Vep +0.00000784383625_Rk * Q(1)**(-1) * Q(2)**(-1) * cos(Q(3))*sin(Q(3))**(-2)
-  Vep = Vep -0.00014000206382_Rk * Q(1)**(-2)
-  Vep = Vep -0.00007000103191_Rk * Q(1)**(-2) * cos(Q(3))**(2)*sin(Q(3))**(-2)
-  Vep = Vep -0.00014000206382_Rk * Q(2)**(-2)
-  Vep = Vep -0.00007000103191_Rk * Q(2)**(-2) * cos(Q(3))**(2)*sin(Q(3))**(-2)
-
- END SUBROUTINE Tana_F2_F1_Vep
-
  SUBROUTINE Set_grid_Op(Op)
  USE Basis_m
  USE Molec_m
@@ -315,8 +265,10 @@ contains
  END SUBROUTINE Set_grid_op
 
 
- SUBROUTINE Make_Mat_OP(Op)
+ SUBROUTINE Make_Mat_OP(Op,Molec)
+ USE Molec_m
  USE Basis_m
+   TYPE (Molec_t),  intent(in)         :: Molec
    TYPE (Op_t),     intent(inout)      :: Op
    !logical,          parameter         :: debug = .true.
    logical,         parameter          :: debug = .false.
@@ -342,7 +294,7 @@ contains
      Psi_b(ib) = ONE
 
      CALL BasisTOGrid_Basis(Psi_g, Psi_b,Op%Basis)
-     CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
+     CALL OpPsi_grid(OpPsi_g,Psi_g,Op,Molec)
      CALL GridTOBasis_Basis(Op%RMat(:,ib), OpPsi_g,Op%Basis)
    END DO
 
@@ -357,19 +309,21 @@ contains
 
   END SUBROUTINE Make_Mat_OP
 
-  SUBROUTINE Diago_Op(Op)
+  SUBROUTINE Diago_Op(Op,Molec)
+  USE Molec_m
   USE Basis_m
    TYPE(Op_t),     intent(inout)       :: Op
+   TYPE(Molec_t),     intent(in)       :: Molec
    !logical,          parameter         :: debug = .true.
    logical,         parameter          ::debug = .false.
    integer                             :: ib,jb
-   real (kind=Rk), allocatable         :: EigenVal(:),EigenVec(:,:)
-
+   real (kind=Rk), allocatable         :: EigenVal(:),EigenVec(:,:),Psi_g(:)
+   real (kind=Rk)                      :: Qmoy(3)
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING Diago_Op'
      flush(out_unitp)
    END IF
-
+   allocate(Psi_g(Op%Basis%nq))
    allocate(EigenVal(Op%Basis%nb))
    allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
 
@@ -378,19 +332,21 @@ contains
    Write(out_unitp,*)
    Write(out_unitp,*)
    Write(out_unitp,*) 'eigenvalues = '
-
+   write(out_unitp,*) 'n','EigenVal','E_n-E_1'
    DO ib=1,5!Op%Basis%nb
-     !write(out_unitp,*) ib,EigenVal(ib)
-     !write(out_unitp,*) ib,(EigenVal(ib)-0.0004486447_Rk)*219474.631443_RK !!option 1 clH2P
-     !write(out_unitp,*) ib,(EigenVal(ib)-0.0004486447_Rk)*219474.631443_RK !!option 2 clH2P
-     !write(out_unitp,*) ib,(EigenVal(ib)+461.0632775273_Rk)*219474.631443_RK !!option 3 clH2P
-     !write(out_unitp,*) ib,(EigenVal(ib)+461.0632775273_Rk)*219474.631443_RK !!option 4 clH2P
-     write(out_unitp,*) ib,(EigenVal(ib)+460.5905268800_Rk)*219474.631443_RK ! option 5 clH2P
-     !write(out_unitp,*) ib,(EigenVal(ib)+460.5905268800_Rk)*219474.631443_RK ! option 6 clH2P
+     write(out_unitp,*) ib,(EigenVal(ib)-Molec%V0)*219474.631443_RK,  EigenVal(ib)-EigenVal(1)
    END DO
 
    Write(out_unitp,*)
    Write(out_unitp,*)
+
+  CALL BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
+
+  DO jb = 1,3!Op%Basis%nb
+  Qmoy(jb) = dot_product(Psi_g(:)*Psi_g(:),&
+  Op%Basis%tab_basis(jb)%x(:)*Op%Basis%tab_basis(jb)%w(:) )
+  Write(out_unitp,*)'Qmoy(jb)',Qmoy(jb)
+  END DO
 
   ! DO ib=1,Op%Basis%nb
    !  write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
@@ -406,7 +362,7 @@ contains
 
   END SUBROUTINE Diago_Op
 
-  SUBROUTINE Potential(Op)
+  SUBROUTINE Potential(Op,Molec)
   USE Basis_m
   USE Molec_m
    !logical,          parameter         :: debug = .true.
@@ -416,6 +372,9 @@ contains
    integer                             :: iq,inb
    real (kind=Rk), allocatable         :: Q(:)
    TYPE(Op_t),  intent(inout)          :: Op
+   TYPE (Molec_t),  intent(in)         :: Molec
+   real (kind=Rk)                      :: V
+
 
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING Potential '
@@ -441,7 +400,9 @@ contains
       DO inb = 1, size(Op%Basis%tab_basis)
         Q(inb) = Op%Basis%tab_basis(inb)%x(tab_iq(inb))
       END DO
-      Op%Scalar_g(iq)=Calc_pot(Q)
+      CALL Calc_potsub(V,Q,Molec)
+      Op%Scalar_g(iq)= V
+      !Op%Scalar_g(iq)=Calc_pot(Q)
      END DO
      Deallocate(Tab_iq)
      Deallocate(Q)
@@ -449,7 +410,9 @@ contains
      allocate( Q(1))
      DO iq=1,Op%Basis%nq
        Q = Op%Basis%x(iq)
-       Op%Scalar_g(iq) = Calc_pot(Q)
+       CALL Calc_potsub(V,Q,Molec)
+       Op%Scalar_g(iq)= V
+       !Op%Scalar_g(iq) = Calc_pot(Q)
      END DO
    END IF
 
@@ -856,10 +819,11 @@ contains
  END SUBROUTINE OpPsi_gridnD
 
 
- SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op)
+ SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op,Molec)
  USE Basis_m
  USE Molec_m
  USE UtilLib_m
+  TYPE (Molec_t),  intent(in)         :: Molec
   TYPE(Op_t) , intent(inout)          :: Op
   real (kind=Rk), intent(in) ,target  :: Psi_g(:)
   real (kind=Rk), intent(inout)       :: OpPsi_g(:)
@@ -881,7 +845,7 @@ contains
     ELSE IF (Simple) THEN
       IF (.NOT.allocated(Op%Scalar_g)) THEN
         ALLOCATE(Op%Scalar_g(Op%Basis%nq))
-        CALL Potential(Op)
+        CALL Potential(Op,Molec)
       END IF
       CALL OpPsi_gridnD(OpPsi_g,Psi_g,Op)
     END IF

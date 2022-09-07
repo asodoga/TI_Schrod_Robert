@@ -44,19 +44,19 @@ PROGRAM TI_Schrod
   REAL(kind=Rk), ALLOCATABLE  :: QQML(:)
   REAL(kind=Rk), ALLOCATABLE  :: Q(:)
   REAL(kind=Rk), ALLOCATABLE  :: Mat_V(:,:)
-  REAL(kind=Rk)               :: V
-  integer                     :: ndim,nsurf,option
-  logical                     :: adiabatic
-  character (len=16)          :: pot_name
+  REAL(kind=Rk)               :: V,Calc_pot1
+  !integer                     :: ndim,nsurf,option
+  !logical                     :: adiabatic
+  !character (len=16)          :: pot_name
 
-  ndim      = 0
-  nsurf     = 0
-  pot_name  = 'read_model'
-  adiabatic = .FALSE.
-  option    = 0
-  CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
-  CALL Read_option_pot(Molec,in_unitp)
-  !STOP
+!  ndim      = 0
+!  nsurf     = 0
+!  pot_name  = 'read_model'
+!  adiabatic = .FALSE.
+  !option    = 0
+!  CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
+  CALL Read_Molec(Molec,in_unitp)
+
   ALLocate(Mat_V(1,1))
   ALLocate(QQML(3))
   QQML(:)= [1.6525859462_Rk,2.4849898659_RK,ZERO]
@@ -68,8 +68,8 @@ PROGRAM TI_Schrod
   Q(:)= [2.4849898659_RK,2.4849898659_RK,1.6525859462_Rk]
   V = Calc_pot(Q)
   Write(*,*) 'V',V
-  !CALL Read_option_pot(Molec)
-  STOP
+  CALL Calc_potsub(Calc_pot1,Q,Molec)
+  !STOP
   !====================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
@@ -93,8 +93,8 @@ PROGRAM TI_Schrod
 
 
   CALL Set_op(Op,Basis) ! to be change
-  CALL Make_Mat_OP(Op)
-  CALL Diago_Op(Op)
+  CALL Make_Mat_OP(Op,Molec)
+  CALL Diago_Op(Op,Molec)
 !  CALL TEST_OpPsi_grid(Op)
 !Stop '34'
   !CALL calc_OpPsi(H,psi,Hpsi)
