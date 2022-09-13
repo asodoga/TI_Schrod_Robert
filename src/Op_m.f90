@@ -365,7 +365,7 @@ contains
    END DO
 
    Open(1,file='Rho_r.dat',status='replace')
-   Do inb = 1,Op%Basis%nq
+   Do inb = 1,Op%Basis%nq  
       write(1,*)(Rho_r(inb,jb),jb=1,size(Op%Basis%tab_basis))
    END DO
    Close(1)
