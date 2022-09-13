@@ -42,7 +42,6 @@ module psi_m
 contains
   SUBROUTINE init_psi(psi,Basis,cplx)
   USE Basis_m
-
     TYPE(psi_t),    intent(inout)      :: psi
     TYPE (Basis_t), intent(in), target :: Basis
     logical,        intent(in)         :: cplx
