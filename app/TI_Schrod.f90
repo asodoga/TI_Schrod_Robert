@@ -45,61 +45,21 @@ PROGRAM TI_Schrod
   REAL(kind=Rk), ALLOCATABLE  :: Q(:)
   REAL(kind=Rk), ALLOCATABLE  :: Mat_V(:,:)
   REAL(kind=Rk)               :: V,Calc_pot1
-  !integer                     :: ndim,nsurf,option
-  !logical                     :: adiabatic
-  !character (len=16)          :: pot_name
+  integer                     :: ndim,nsurf,option
+  logical                     :: adiabatic
+  character (len=16)          :: pot_name
 
-!  ndim      = 0
-!  nsurf     = 0
-!  pot_name  = 'read_model'
-!  adiabatic = .FALSE.
-  !option    = 0
-!  CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
   CALL Read_Molec(Molec,in_unitp)
 
-  ALLocate(Mat_V(1,1))
-  ALLocate(QQML(3))
-  QQML(:)= [1.6525859462_Rk,2.4849898659_RK,ZERO]
-
-
-  CALL sub_Qmodel_V(Mat_V,QQML)
-  Write(*,*) 'Mat_V',Mat_V
-  ALLocate(Q(3))
-  Q(:)= [2.4849898659_RK,2.4849898659_RK,1.6525859462_Rk]
-  V = Calc_pot(Q)
-  Write(*,*) 'V',V
-  CALL Calc_potsub(Calc_pot1,Q,Molec)
-  !STOP
-  !====================================================================
+  STOP
+  !===================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
-  !====================================================================
 
-  !write(out_unitp,*) 'Initialization of a real psi'
-
-  !CALL init_psi(psi,Basis,cplx=.FALSE.) ! to be changed
-  !psi%RVec(:) = ONE
-  !CALL Write_psi(psi)
-
-!  write(out_unitp,*) 'Initialization of a complex psi'
-!  CALL init_psi(psi,Basis,cplx=.TRUE.) ! to be changed
-!  psi%CVec(:) = CONE
-!  CALL Write_psi(psi)
-!  write(out_unitp,*) ' | H | Psi > calculation'
-  !Test Robert
-  !CALL Test_Passage(Basis)
-  !Call Calc_dngg_grid(Basis)
-
-
-  CALL Set_op(Op,Basis) ! to be change
-  CALL Make_Mat_OP(Op,Molec)
-  CALL Diago_Op(Op,Molec)
-!  CALL TEST_OpPsi_grid(Op)
-!Stop '34'
-  !CALL calc_OpPsi(H,psi,Hpsi)
-!  CALL Write_psi(Hpsi)
-
+  CALL Set_op(Op,Basis,Molec) ! to be change
+  CALL Make_Mat_OP(Op)
+  CALL Diago_Op(Op)
 
   write(out_unitp,*) 'deallocation'
 

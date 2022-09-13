@@ -42,6 +42,7 @@ module Op_m
   TYPE :: Op_t
     TYPE (Grid_t) ,    allocatable :: Grid(:)
     TYPE (Basis_t),    pointer     :: Basis => Null()
+    TYPE (Molec_t),    pointer     :: Molec => Null()
     real (kind=Rk),    allocatable :: Scalar_g(:) ! The scalar part of the operator (The  for Hamiltonian)
     real (kind=Rk),    allocatable :: RMat(:,:) ! The matrix of the Hamiltonian operator
 
@@ -98,16 +99,17 @@ contains
      write(out_unitp,*) 'END Writing Op'
    END IF
 
-  END SUBROUTINE write_Op
+ END SUBROUTINE write_Op
 
 
- SUBROUTINE Set_Op(Op,Basis)
+ SUBROUTINE Set_Op(Op,Basis,Molec)
  USE Basis_m
  USE Molec_m
  USE NDindex_m
 
   TYPE(Op_t),     intent(inout)       :: Op
   TYPE (Basis_t), intent(in),  target :: Basis
+  TYPE (Molec_t), intent(in),  target :: Molec
   !logical,          parameter         :: debug = .true.
   logical,         parameter          :: debug = .false.
   integer                             :: ib,iq
@@ -120,6 +122,7 @@ contains
   END IF
 !----------------------end --------------------------------------------
   Op%Basis => Basis  !Initialization of Op%Basis by the values ​​of Basis
+  Op%Molec => Molec
 
   IF (Simple) THEN
    allocate(Op%Grid(3))
@@ -141,28 +144,23 @@ contains
    Op%Grid(3)%Vec(:)=-HALF/mass
   ELSE
    CALL Set_grid_Op(Op)
-
   END IF
-
-
   IF (debug) THEN
     write(out_unitp,*) 'END Set_Op'
     flush(out_unitp)
   END IF
-
  END SUBROUTINE Set_Op
 
  SUBROUTINE Set_grid_Op(Op)
  USE Basis_m
- USE Molec_m
  USE NDindex_m
 
   TYPE(Op_t),     intent(inout)       :: Op
-  real(kind=Rk)                       :: massr3(3)
-  real(kind=Rk)                       :: Q(3),F,F2(3,3),F1(3),Vep
+  real(kind=Rk)                       :: F,F2(3,3),F1(3),Vep,V
+  real(kind=Rk), allocatable          :: Q(:)
   !logical,          parameter         :: debug = .true.
   logical,         parameter          :: debug = .false.
-  integer                             :: ib,iq
+  integer                             :: ib,iq,inb
   logical                             :: Endloop_q
   logical                             :: Endloop_b
   integer,         allocatable        :: tab_iq(:)
@@ -173,7 +171,7 @@ contains
     call write_basis(Op%Basis)
     flush(out_unitp)
   END IF
-
+  allocate(Q(size(Op%Basis%tab_basis)))
   allocate(Op%Grid(14))
   allocate(Op%Grid(1)%Vec(Op%Basis%nq))
   allocate(Op%Grid(2)%Vec(Op%Basis%nq))
@@ -210,7 +208,6 @@ contains
   Op%Grid(9)%DerivIndex(2)  = 2
   Op%Grid(10)%DerivIndex(1) = 3
   Op%Grid(10)%DerivIndex(2) = 3
-
   Op%Grid(11)%DerivIndex(1) = 1
   Op%Grid(11)%DerivIndex(2) = 0
   Op%Grid(12)%DerivIndex(1) = 2
@@ -229,30 +226,25 @@ contains
    CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
 
    IF (Endloop_q) exit
-
-   Q(1) =  Op%Basis%tab_basis(1)%x(tab_iq(1))
-   Q(2) =  Op%Basis%tab_basis(2)%x(tab_iq(2))
-   Q(3) =  Op%Basis%tab_basis(3)%x(tab_iq(3))
-
+   Do inb = 1,size(Op%Basis%tab_basis)
+     Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb))
+   END DO
    Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
-
-   Op%Grid(1)%Vec(Iq)  = Calc_pot(Q)
+   CALL Calc_potsub(V,Q,Op%Molec)
+   Op%Grid(1)%Vec(Iq)  = V
    Op%Grid(2)%Vec(Iq)  = F2(1,1)
-   !Op%Grid(2)%Vec(Iq)  = -0.0002800041_Rk! F2(2,2)
-   Op%Grid(3)%Vec(Iq)  = ZERO!F2(1,2)
-   Op%Grid(4)%Vec(Iq)  = ZERO!F2(1,3)
-   Op%Grid(5)%Vec(Iq)  = ZERO!F2(2,1)
-   !Op%Grid(6)%Vec(Iq)  = -0.0002800041_Rk! F2(2,2)
-   Op%Grid(6)%Vec(Iq)  =  F2(2,2)
-   Op%Grid(7)%Vec(Iq)  = ZERO! F2(2,3)
-   Op%Grid(8)%Vec(Iq)  = ZERO!F2(3,1)
-   Op%Grid(9)%Vec(Iq)  = ZERO!F2(3,2)
-   Op%Grid(10)%Vec(Iq) =  F2(3,3)
-   !Op%Grid(10)%Vec(Iq) = -0.0000908946_Rk! F2(3,3)
-   Op%Grid(11)%Vec(Iq) = ZERO!F1(1)
-   Op%Grid(12)%Vec(Iq) = ZERO!F1(2)
-   Op%Grid(13)%Vec(Iq) = ZERO!F1(3)
-   Op%Grid(14)%Vec(Iq) = ZERO!Vep
+   Op%Grid(3)%Vec(Iq)  = F2(1,2)
+   Op%Grid(4)%Vec(Iq)  = F2(1,3)
+   Op%Grid(5)%Vec(Iq)  = F2(2,1)
+   Op%Grid(6)%Vec(Iq)  = F2(2,2)
+   Op%Grid(7)%Vec(Iq)  = F2(2,3)
+   Op%Grid(8)%Vec(Iq)  = F2(3,1)
+   Op%Grid(9)%Vec(Iq)  = F2(3,2)
+   Op%Grid(10)%Vec(Iq) = F2(3,3)
+   Op%Grid(11)%Vec(Iq) = F1(1)
+   Op%Grid(12)%Vec(Iq) = F1(2)
+   Op%Grid(13)%Vec(Iq) = F1(3)
+   Op%Grid(14)%Vec(Iq) = Vep
   END DO
 
   Deallocate(Tab_iq)
@@ -265,10 +257,10 @@ contains
  END SUBROUTINE Set_grid_op
 
 
- SUBROUTINE Make_Mat_OP(Op,Molec)
+ SUBROUTINE Make_Mat_OP(Op)
  USE Molec_m
  USE Basis_m
-   TYPE (Molec_t),  intent(in)         :: Molec
+
    TYPE (Op_t),     intent(inout)      :: Op
    !logical,          parameter         :: debug = .true.
    logical,         parameter          :: debug = .false.
@@ -294,7 +286,7 @@ contains
      Psi_b(ib) = ONE
 
      CALL BasisTOGrid_Basis(Psi_g, Psi_b,Op%Basis)
-     CALL OpPsi_grid(OpPsi_g,Psi_g,Op,Molec)
+     CALL OpPsi_grid(OpPsi_g,Psi_g,Op)
      CALL GridTOBasis_Basis(Op%RMat(:,ib), OpPsi_g,Op%Basis)
    END DO
 
@@ -309,21 +301,24 @@ contains
 
   END SUBROUTINE Make_Mat_OP
 
-  SUBROUTINE Diago_Op(Op,Molec)
+  SUBROUTINE Diago_Op(Op)
   USE Molec_m
   USE Basis_m
    TYPE(Op_t),     intent(inout)       :: Op
-   TYPE(Molec_t),     intent(in)       :: Molec
    !logical,          parameter         :: debug = .true.
    logical,         parameter          ::debug = .false.
-   integer                             :: ib,jb
-   real (kind=Rk), allocatable         :: EigenVal(:),EigenVec(:,:),Psi_g(:)
-   real (kind=Rk)                      :: Qmoy(3)
+   integer                             :: jb,inb
+   integer                             :: ib,iq
+   logical                             :: Endloop_q
+   integer,         allocatable        :: tab_iq(:),QW(:,:),Qmoy(:),Rho_r(:,:)
+   real (kind=Rk), allocatable         :: EigenVal(:),EigenVec(:,:),Psi_g(:),DifEigen(:)
+
    IF (debug) THEN
      write(out_unitp,*) 'BEGINNING Diago_Op'
      flush(out_unitp)
    END IF
    allocate(Psi_g(Op%Basis%nq))
+   allocate(DifEigen(Op%Basis%nb))
    allocate(EigenVal(Op%Basis%nb))
    allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
 
@@ -334,24 +329,52 @@ contains
    Write(out_unitp,*) 'eigenvalues = '
    write(out_unitp,*) 'n','EigenVal','E_n-E_1'
    DO ib=1,5!Op%Basis%nb
-     write(out_unitp,*) ib,(EigenVal(ib)-Molec%V0)*219474.631443_RK,  EigenVal(ib)-EigenVal(1)
+     DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
+     write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
    END DO
 
    Write(out_unitp,*)
    Write(out_unitp,*)
 
-  CALL BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
+   CALL BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
 
-  DO jb = 1,3!Op%Basis%nb
-  Qmoy(jb) = dot_product(Psi_g(:)*Psi_g(:),&
-  Op%Basis%tab_basis(jb)%x(:)*Op%Basis%tab_basis(jb)%w(:) )
-  Write(out_unitp,*)'Qmoy(jb)',Qmoy(jb)
-  END DO
+   Allocate(Qmoy(size(Op%Basis%tab_basis)))
+   Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
+   Allocate(Qw(Op%Basis%nq,size(Op%Basis%tab_basis)))
+   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+    Iq=0
+    DO
+    Iq=Iq+1
+    CALL increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+    IF (Endloop_q) exit
+      Do inb=1,size(Op%Basis%tab_basis)
+        Qw(Iq,inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb))*&
+                              Op%Basis%tab_basis(inb)%W(tab_iq(inb))
+      END DO
+      Rho_r(Iq,1) = Psi_g(Iq)*Psi_g(Iq) *Op%Basis%tab_basis(2)%W(tab_iq(2))&
+                                *Op%Basis%tab_basis(3)%W(tab_iq(3))
+      Rho_r(Iq,2) = Psi_g(Iq)*Psi_g(Iq) *Op%Basis%tab_basis(1)%W(tab_iq(1))&
+                                *Op%Basis%tab_basis(3)%W(tab_iq(3))
+      Rho_r(Iq,3) = Psi_g(Iq)*Psi_g(Iq) *Op%Basis%tab_basis(1)%W(tab_iq(1))&
+                                *Op%Basis%tab_basis(2)%W(tab_iq(2))
+    END DO
+    DO inb = 1,size(Op%Basis%tab_basis)
+    Qmoy(inb) = dot_product(Psi_g(:)*Psi_g(:),Qw(:,inb))
+    Write(out_unitp,*)'Qmoy(inb)',Qmoy(inb)
+   END DO
 
-  ! DO ib=1,Op%Basis%nb
-   !  write(*,*) (EigenVec(ib,jb),jb=1,Op%Basis%nb)
-   !END DO
+   Open(1,file='Rho_r.dat',status='replace')
+   Do inb = 1,Op%Basis%nq
+      write(1,*)(Rho_r(inb,jb),jb=1,size(Op%Basis%tab_basis))
+   END DO
+   Close(1)
 
+
+   Deallocate(Rho_r)
+   Deallocate(QW)
+   Deallocate(Qmoy)
+   Deallocate(tab_iq)
    Deallocate(EigenVal)
    Deallocate(EigenVec)
 
@@ -362,17 +385,16 @@ contains
 
   END SUBROUTINE Diago_Op
 
-  SUBROUTINE Potential(Op,Molec)
+  SUBROUTINE Potential(Op)
   USE Basis_m
   USE Molec_m
-   !logical,          parameter         :: debug = .true.
-   logical,         parameter          :: debug = .false.
+   logical,          parameter         :: debug = .true.
+   !logical,         parameter          :: debug = .false.
    logical                             :: Endloop_q
    integer ,allocatable                :: tab_iq(:)
    integer                             :: iq,inb
    real (kind=Rk), allocatable         :: Q(:)
    TYPE(Op_t),  intent(inout)          :: Op
-   TYPE (Molec_t),  intent(in)         :: Molec
    real (kind=Rk)                      :: V
 
 
@@ -400,8 +422,9 @@ contains
       DO inb = 1, size(Op%Basis%tab_basis)
         Q(inb) = Op%Basis%tab_basis(inb)%x(tab_iq(inb))
       END DO
-      CALL Calc_potsub(V,Q,Molec)
+      CALL Calc_potsub(V,Q,Op%Molec)
       Op%Scalar_g(iq)= V
+      write(out_unitp,*)iq,'v=', Op%Scalar_g, 'Q',Q(:)
       !Op%Scalar_g(iq)=Calc_pot(Q)
      END DO
      Deallocate(Tab_iq)
@@ -410,14 +433,14 @@ contains
      allocate( Q(1))
      DO iq=1,Op%Basis%nq
        Q = Op%Basis%x(iq)
-       CALL Calc_potsub(V,Q,Molec)
+       CALL Calc_potsub(V,Q,Op%Molec)
        Op%Scalar_g(iq)= V
        !Op%Scalar_g(iq) = Calc_pot(Q)
      END DO
    END IF
 
    IF (debug) THEN
-     write(out_unitp,*)'v', Op%Scalar_g
+
      write(out_unitp,*) 'END Potential'
      flush(out_unitp)
    END IF
@@ -819,11 +842,11 @@ contains
  END SUBROUTINE OpPsi_gridnD
 
 
- SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op,Molec)
+ SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op)
  USE Basis_m
  USE Molec_m
  USE UtilLib_m
-  TYPE (Molec_t),  intent(in)         :: Molec
+!  TYPE (Molec_t),  intent(in)         :: Molec
   TYPE(Op_t) , intent(inout)          :: Op
   real (kind=Rk), intent(in) ,target  :: Psi_g(:)
   real (kind=Rk), intent(inout)       :: OpPsi_g(:)
@@ -845,7 +868,7 @@ contains
     ELSE IF (Simple) THEN
       IF (.NOT.allocated(Op%Scalar_g)) THEN
         ALLOCATE(Op%Scalar_g(Op%Basis%nq))
-        CALL Potential(Op,Molec)
+        CALL Potential(Op)
       END IF
       CALL OpPsi_gridnD(OpPsi_g,Psi_g,Op)
     END IF

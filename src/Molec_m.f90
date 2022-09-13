@@ -27,8 +27,9 @@
 module Molec_m
   USE NumParameters_m
   USE Tana_m
-  implicit none
-  private
+
+  IMPLICIT NONE
+
 
   !real(kind=Rk) :: mass = HALF
   real(kind=Rk) :: mass3(3) != HALF
@@ -42,25 +43,21 @@ module Molec_m
   logical       :: QML=.True.
 
   TYPE Molec_t
-       real (kind=Rk)                 :: V0 ! le fond du puits
-       character(len=:), allocatable  :: sym_type !type of symmetry
-       character(len=:), allocatable  :: coord_type ! name of coord
-       character(len=:), allocatable  :: Model_type
+    integer                        :: ndim
+    real (kind=Rk)                 :: V0 ! le fond du puits
+    character(len=:), allocatable  :: sym_type !type of symmetry
+    character(len=:), allocatable  :: coord_type ! name of coord
+    character(len=:), allocatable  :: Model_type
   END TYPE Molec_t
 
-
-  public :: Calc_pot,Set_mass,mass,mass3,Molec_t,Read_Molec,Calc_potsub,Tana_F2_F1_Vep
-
-
+  public :: Calc_pot,Set_mass,mass,mass3,massr3,Molec_t,Read_Molec,Calc_potsub,Tana_F2_F1_Vep
   contains
 
    SUBROUTINE Set_mass(massr3)
-
     real(kind=Rk),intent(out)           :: massr3(3)
     real(kind=Rk)                       :: mass3(3)
     !logical,          parameter         :: debug = .true.
     logical,         parameter          :: debug = .false.
-
 
     IF (debug) THEN
       write(out_unitp,*) 'BEGINNING Set_mass'
@@ -77,7 +74,7 @@ module Molec_m
 
     massr3(1) = mass3(1)*mass3(3)*(mass3(1)+mass3(3))**(-1)
     massr3(2) = mass3(1)*mass3(3)*(mass3(1)+mass3(3))**(-1)
-    massr3(3) =  mass3(3)
+    massr3(3) = mass3(3)
 
 
     IF (debug) THEN
@@ -87,18 +84,23 @@ module Molec_m
 
   END SUBROUTINE Set_mass
 
-  SUBROUTINE Read_Molec(Molec,ni)
+  SUBROUTINE Read_Molec1(Molec,ni)
   USE UtilLib_m
     integer,             intent(in)     :: ni
     TYPE(Molec_t),       intent(inout)  :: Molec
-    logical,             parameter      :: debug = .true.
-    !logical,             parameter      ::debug = .false.
+    !logical,             parameter      :: debug = .true.
+    logical,             parameter      :: debug = .false.
     REAL(kind=Rk)                       :: V0
     integer                             :: err_io
     character (len=Name_len)            :: coord_type,sym_type,Model_type
-    integer                             :: ndim,nsurf,option
+    integer                             :: ndim,ndimQ,nsurf,option,inb
     logical                             :: adiabatic
     character (len=16)                  :: pot_name
+    REAL(kind=Rk), ALLOCATABLE          :: Mat_V(:,:)
+    REAL(kind=Rk), ALLOCATABLE          :: H(:,:,:,:),QML0(:),Q0(:)
+    REAL(kind=Rk), ALLOCATABLE          :: G(:,:,:)
+    REAL(kind=Rk), ALLOCATABLE          :: F2(:,:),F1(:),Vep,ScaleQ(:),m(:)
+    REAL(kind=Rk)                       :: FR
 
     NAMELIST /pot/ coord_type,sym_type,Model_type,V0
 
@@ -106,20 +108,61 @@ module Molec_m
     coord_type    = 'simple'
     sym_type      = 'sym'
     V0            = Zero
+
     IF (debug) THEN
-      write(out_unitp,*)'BEGINNING Read_Molec'
+      write(out_unitp,*)'BEGINNING Read_option_pot'
       write(out_unitp,*)'V0=',V0,'coord_type=',coord_type,'sym_type=',sym_type
       write(out_unitp,*)"Model_type=",Model_type
       flush(out_unitp)
     END IF
-    ndim      = 0
-    nsurf     = 0
-    pot_name  = 'read_model'
-    adiabatic = .FALSE.
-    option    = 0
-    CALL sub_Init_Qmodel(ndim,nsurf,pot_name,adiabatic,option)
-
     Read(ni,nml=pot,IOSTAT=err_io)
+    SELECT CASE (Model_type)
+    CASE('QML')
+      Molec%ndim  =  ndim
+      Allocate(Mat_V(nsurf,nsurf))
+      Allocate(H(nsurf,1,ndim,ndim))
+      Allocate(G(nsurf,nsurf,ndim))
+      Allocate(F2(ndim,ndim))
+      Allocate(F1(ndim))
+      Allocate(Q0(ndim))
+      Allocate(QML0(ndim))
+      Allocate(ScaleQ(ndim))
+      CALL get_Qmodel_Q0(QML0,option)
+      SELECT CASE (sym_type)
+      CASE ('ANTISYM')
+       Q0(3)=QML0(1)
+       Q0(1)=QML0(2)
+       Q0(2)=QML0(2)
+       Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
+       CALL sub_Qmodel_VGH(Mat_V,G,H,QML0)
+       m(1) = -one/(2*F2(1,1))
+       ScaleQ(3)=sqrt(m(1)*sqrt(H(1,1,1,1)/m(1)))
+       m(2) = -one/(2*F2(2,2))
+       Fr=H(1,1,2,2)
+       !ScaleQ(1)= sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
+       !ScaleQ(2)= sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
+       !DO inb =1,3
+      !   Write(*,*)inb, 'ScaleQ=',ScaleQ(inb)
+       !END DO
+      CASE ('SYM')
+       Q0(1)=QML0(1)
+       Q0(2)=QML0(2)
+       Q0(3)=QML0(3)
+       Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
+       CALL sub_Qmodel_VGH(Mat_V,G,H,QML0)
+       DO inb =1,3
+         m(inb) = -one/(2*F2(inb,inb))
+         ScaleQ(inb)=sqrt(m(inb)*sqrt(H(1,1,inb,inb)/m(inb)))
+         Write(*,*)inb, 'ScaleQ(inb)=',ScaleQ(inb)
+       END DO
+      CASE DEFAULT
+          STOP 'sym_type is bad'
+      END SELECT
+    CASE('LOCAL')
+      Molec%ndim  =  ndim
+    CASE DEFAULT
+      STOP 'Model_type is bad'
+    END SELECT
 
     Molec%V0         = V0
     Molec%coord_type = coord_type
@@ -130,7 +173,109 @@ module Molec_m
     IF (debug) THEN
       write(out_unitp,*)'V0=',Molec%V0,'coord_type=',Molec%coord_type,'sym_type=',Molec%sym_type
       write(out_unitp,*)"Model_type=",Molec%Model_type
-      write(out_unitp,*) ' END Read_Molec'
+      write(out_unitp,*) ' END Read_option_pot'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE Read_Molec1
+
+  SUBROUTINE Read_Molec(Molec,ni)
+  USE UtilLib_m
+    integer,             intent(in)     :: ni
+    TYPE(Molec_t),       intent(inout)  :: Molec
+    !logical,             parameter      :: debug = .true.
+    logical,             parameter      :: debug = .false.
+    REAL(kind=Rk)                       :: V0
+    integer                             :: err_io
+    character (len=Name_len)            :: coord_type,sym_type,Model_type
+    integer                             :: ndim,ndimQ,nsurf,option,inb
+    logical                             :: adiabatic
+    character (len=16)                  :: pot_name
+    REAL(kind=Rk), ALLOCATABLE          :: Mat_V(:,:)
+    REAL(kind=Rk), ALLOCATABLE          :: H(:,:,:,:),QML0(:),Q0(:)
+    REAL(kind=Rk), ALLOCATABLE          :: G(:,:,:)
+    REAL(kind=Rk), ALLOCATABLE          :: F2(:,:),F1(:),Vep,ScaleQ(:),m(:)
+    REAL(kind=Rk)                       :: FR
+
+    NAMELIST /pot/ coord_type,sym_type,Model_type,V0,ndim
+
+    Model_type    = 'local'
+    coord_type    = 'simple'
+    sym_type      = 'sym'
+    V0            = Zero
+    ndim          = 1
+
+    IF (debug) THEN
+      write(out_unitp,*)'BEGINNING Read_Molec'
+      write(out_unitp,*)'V0=',V0,'coord_type=',coord_type,'sym_type=',sym_type
+      write(out_unitp,*)'Model_type=',Model_type
+      flush(out_unitp)
+    END IF
+
+    Read(ni,nml=pot,IOSTAT=err_io)
+    SELECT CASE (Model_type)
+    CASE('QML')
+      ndimQ      = 0
+      nsurf     = 0
+      pot_name  = 'read_model'
+      adiabatic = .FALSE.
+      option    = 0
+      CALL sub_Init_Qmodel(ndimQ,nsurf,pot_name,adiabatic,option)
+
+      Molec%ndim  =  ndimQ
+      Allocate(Mat_V(nsurf,nsurf))
+      Allocate(H(nsurf,1,ndimQ,ndimQ))
+      Allocate(G(nsurf,nsurf,ndimQ))
+      Allocate(F2(ndimQ,ndimQ))
+      Allocate(F1(ndimQ))
+      Allocate(Q0(ndimQ))
+      Allocate(QML0(ndimQ))
+      Allocate(ScaleQ(ndimQ))
+      CALL get_Qmodel_Q0(QML0,option)
+      SELECT CASE (sym_type)
+      CASE ('ANTISYM')
+       Q0(3)=QML0(1)
+       Q0(1)=QML0(2)
+       Q0(2)=QML0(2)
+       Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
+       CALL sub_Qmodel_VGH(Mat_V,G,H,QML0)
+       m(1) = -one/(2*F2(1,1))
+       ScaleQ(3)=sqrt(m(1)*sqrt(H(1,1,1,1)/m(1)))
+       m(2) = -one/(2*F2(2,2))
+       Fr=H(1,1,2,2)
+       ScaleQ(1)= sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
+       ScaleQ(2)= sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
+       DO inb =1,3
+         Write(*,*)inb, 'ScaleQ=',ScaleQ(inb)
+       END DO
+      CASE ('SYM')
+       Q0(1)=QML0(1)
+       Q0(2)=QML0(2)
+       Q0(3)=QML0(3)
+       Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
+       CALL sub_Qmodel_VGH(Mat_V,G,H,QML0)
+       DO inb =1,3
+         m(inb) = -one/(2*F2(inb,inb))
+         ScaleQ(inb)=sqrt(m(inb)*sqrt(H(1,1,inb,inb)/m(inb)))
+         Write(*,*)inb, 'ScaleQ(inb)=',ScaleQ(inb)
+       END DO
+      CASE DEFAULT
+          STOP 'sym_type is bad'
+      END SELECT
+    CASE('LOCAL')
+      Molec%ndim  =  ndim
+    CASE DEFAULT
+      STOP 'Model_type is bad'
+    END SELECT
+    Molec%V0         = V0
+    Molec%coord_type = coord_type
+    Molec%sym_type   = sym_type
+    Molec%Model_type = Model_type
+
+    IF (debug) THEN
+      write(out_unitp,*)'V0=',Molec%V0,'coord_type=',Molec%coord_type,'sym_type=',Molec%sym_type
+      write(out_unitp,*)'Model_type=',Molec%Model_type
+      write(out_unitp,*)'END Read_Molec'
       flush(out_unitp)
     END IF
 
@@ -143,8 +288,8 @@ module Molec_m
     REAL(kind=Rk),       intent(inout)  :: Calc_pot
     REAL(kind=Rk), ALLOCATABLE          :: QQML(:)
     REAL(kind=Rk), ALLOCATABLE          :: Mat_V(:,:)
-    logical,             parameter      :: debug = .true.
-    !logical,             parameter      ::debug = .false.
+    !logical,             parameter      :: debug = .true.
+    logical,             parameter      ::debug = .false.
 
 
     IF (debug) THEN
@@ -169,16 +314,18 @@ module Molec_m
        QQML(1)= Q(3)
        QQML(2)= HALF*(Q(1)+Q(2))
        QQML(3)= HALF*(Q(1)-Q(2))
-      CASE ('SYM')
+     CASE ('sym')
        QQML(1)= Q(1)
        QQML(2)= Q(2)
        QQML(3)= Q(3)
+      CASE DEFAULT
+          STOP 'sym_type is bad'
       END SELECT
       !write(*,*) "QQML",QQML
       CALL sub_Qmodel_V(Mat_V,QQML)
       !write(*,*) "Mat_V",Mat_V
       Calc_pot = Mat_V(1,1)
-    CASE ('Local')
+    CASE ('local')
       Calc_pot = HALF * dot_product( Q,Q)! 0.5*x^2
      !Calc_pot =  dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! x^2+x^4
      !Calc_pot =  -TEN * dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! -10x^2+x^4
