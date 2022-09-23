@@ -1,12 +1,13 @@
+&pot coord_type='CURV' sym_type='ANTISYM' Model_type='QML' V0=0.0004486447 /
 &potential
   pot_name='ClH2+' ! potential surface name
   option=1
    /
-   &pot coord_type='CURV' sym_type='ANTISYM' Model_type='QML' V0=0.0004486447 /
+
    &basis_nD name='Dp' nb_basis=3   /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=   4.6338312987375945   Q0=2.4849898659 /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=   5.4716605873098167 Q0=2.4849898659  /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=   5.8199889902821225   Q0=1.6525859462/
+   &basis_nD name='herm'   nb=4 nq=12 SCALEQ=   4.6338312987375945   Q0=2.4849898659 /
+   &basis_nD name='herm'   nb=4 nq=12 SCALEQ=   5.4716605873098167 Q0=2.4849898659  /
+   &basis_nD name='herm'   nb=4 nq=12 SCALEQ=   5.8199889902821225   Q0=1.6525859462/
 
 
 

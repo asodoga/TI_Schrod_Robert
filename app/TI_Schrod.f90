@@ -51,7 +51,7 @@ PROGRAM TI_Schrod
 
   CALL Read_Molec(Molec,in_unitp)
 
-  STOP
+  !STOP
   !===================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
