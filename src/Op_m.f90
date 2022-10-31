@@ -301,7 +301,7 @@ contains
    logical                             :: Endloop_q
    integer,         allocatable        :: tab_iq(:)
    real (kind=Rk), allocatable         :: EigenVal(:),EigenVec(:,:),Psi_g(:),DifEigen(:)
-   real (kind=Rk), allocatable         :: Qmoy(:),Rho_r(:,:)
+   real (kind=Rk), allocatable         :: Qmoy(:),Rho_r(:,:),omega(:)
    real (kind=Rk)                      :: W,Wr
 
    IF (debug) THEN
@@ -310,18 +310,27 @@ contains
    END IF
    allocate(Psi_g(Op%Basis%nq))
    allocate(DifEigen(Op%Basis%nb))
+   !allocate(omega(Op%Basis%nb))
    allocate(EigenVal(Op%Basis%nb))
    allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
+   !Call Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
+   !Call Diago_Arpack(EigenVec,EigenVal,Op%Basis%nb,Op%Basis%nb,Op%Basis%nb,Op%RMat)
    CALL  diagonalization(Op%RMat,EigenVal,EigenVec,Op%Basis%nb)
    Write(out_unitp,*)
    Write(out_unitp,*)
    Write(out_unitp,*) 'eigenvalues = '
-   write(out_unitp,*) 'n','EigenVal','E_n-E_1'
-   DO ib=1,5!Op%Basis%nb
+   write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
+   DO ib=1,20!Op%Basis%nb
      DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
      write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
    END DO
 
+   write(out_unitp,*)"2V2=", TWo*DifEigen(2),"2v1=", TWo*DifEigen(4),"2V3=", TWo*DifEigen(3)
+   write(out_unitp,*)"3V2=", THREE*DifEigen(2),"3v1=", THREE*DifEigen(4),"3V3=", THREE*DifEigen(3)
+   write(out_unitp,*)"V2+v3=", DifEigen(2)+DifEigen(3),"V2+v1=", DifEigen(2)+DifEigen(4)&
+   ,"V3+V1=", DifEigen(3)+DifEigen(4)
+   write(out_unitp,*)"2V2+v3=", TWo*DifEigen(2)+DifEigen(3),"2V2+v1=", TWo*DifEigen(2)+DifEigen(4)
+   write(out_unitp,*)"4V2=", FOUR*DifEigen(2)
    Write(out_unitp,*)
    Write(out_unitp,*)
 

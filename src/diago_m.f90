@@ -29,7 +29,7 @@ MODULE diago_m
   IMPLICIT NONE
 
    PRIVATE
-   PUBLIC diagonalization
+   PUBLIC diagonalization,Diago_Arpack
 
   INTERFACE diagonalization
      MODULE PROCEDURE QML_diagonalization
@@ -164,29 +164,7 @@ MODULE diago_m
     CASE(3,377) ! lapack77
       IF (debug) write(out_unitp,*) 'lapack77: DSYEV (symmetric)'
 
-! #if __LAPACK == 1
-!       lwork = 3*n-1
-!       allocate(work(lwork))
-!       Vec(:,:) = Mat(:,:)
-!
-!       ! lapack subroutines need integer (kind=4 or int32), therefore, we add a conversion, otherwise
-!       ! it fails when integers (kind=8 or int64) are used (at the compilation).
-!       n4     = int(n,kind=int32)
-!       lwork4 = int(lwork,kind=int32)
-!       CALL DSYEV('V','U',n4,Vec,n4,REig,work,lwork4,ierr4)
-!
-!       IF (debug) write(out_unitp,*) 'ierr=',ierr4
-!       flush(out_unitp)
-!
-!       IF (ierr4 /= 0_int32) THEN
-!          write(out_unitp,*) ' ERROR in ',name_sub
-!          write(out_unitp,*) ' DSYEV lapack subroutine has FAILED!'
-!          STOP
-!       END IF
-!
-!
-!       deallocate(work)
-! #else
+
       write(out_unitp,*) ' ERROR in ',name_sub
       write(out_unitp,*) '  LAPACK is not linked (LAPACK=0 in the makefile).'
       write(out_unitp,*) '  The program should not reach the LAPACK case.'
@@ -196,69 +174,13 @@ MODULE diago_m
 !#endif
 
     CASE(4,477) ! lapack77 (non-symmetric)
-! #if __LAPACK == 1
-!       IF (debug) write(out_unitp,*) 'lapack77: DGEEV (non-symmetric)'
-!       flush(out_unitp)
-!
-!       allocate(Mat_save(n,n))
-!       Mat_save = Mat ! save mat
-!
-!
-!       lwork = (2+64)*n
-!       ldvr  = n
-!       lda   = n
-!       allocate(work(lwork))
-!
-!
-!       n4     = int(n,kind=int32)
-!       lwork4 = int(lwork,kind=int32)
-!       lda4   = int(lda,kind=int32)
-!       ldvr4  = int(ldvr,kind=int32)
-!
-!       IF (present(IEig)) THEN
-!         CALL DGEEV('N','V',n4,Mat_save,lda4,REig,IEig,dummy,              &
-!                    int(1,kind=int32),Vec,ldvr4,work,lwork4,ierr4)
-!         IF (debug) write(out_unitp,*)'ierr=',ierr4
-!         IF (ierr4 /= 0_int32) THEN
-!            write(out_unitp,*) ' ERROR in ',name_sub
-!            write(out_unitp,*) ' DGEEV lapack subroutine has FAILED!'
-!            STOP
-!         END IF
-!
-!         IF (debug) THEN
-!           DO i=1,n
-!             write(out_unitp,*) 'Eigenvalue(', i, ') = ', REig(i),'+I ',IEig(i)
-!           END DO
-!         END IF
-!       ELSE
-!         allocate(IEig_loc(n))
-!
-!         CALL DGEEV('N','V',n4,Mat_save,lda4,REig,IEig_loc,dummy,        &
-!                    int(1,kind=int32),Vec,ldvr4,work,lwork4,ierr4)
-!         IF (debug) write(out_unitp,*)'ierr=',ierr4
-!         IF (ierr4 /= 0_int32) THEN
-!            write(out_unitp,*) ' ERROR in ',name_sub
-!            write(out_unitp,*) ' DGEEV lapack subroutine has FAILED!'
-!            STOP
-!         END IF
-!
-!         DO i=1,n
-!           write(out_unitp,*) 'Eigenvalue(', i, ') = ', REig(i),'+I ',IEig_loc(i)
-!         END DO
-!
-!         deallocate(IEig_loc)
-!       END IF
-!
-!       deallocate(work)
-!       deallocate(Mat_save)
-! #else
+
       write(out_unitp,*) ' ERROR in ',name_sub
       write(out_unitp,*) '  LAPACK is not linked (LAPACK=0 in the makefile).'
       write(out_unitp,*) '  The program should not reach the LAPACK case.'
       write(out_unitp,*) '  => Probabely, wrong type_diag_default.'
       write(out_unitp,*) '  => CHECK the fortran!!'
       STOP 'ERROR in QML_diagonalization: LAPACK case impossible'
-!#endif
 
     CASE(5) ! lanczos
 
@@ -1071,8 +993,390 @@ MODULE diago_m
          IF (maxdiff < epsi) EXIT
 
       END DO
-stop
+      stop
   end subroutine QML_Lanczos
+
+
+  SUBROUTINE Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
+    USE NumParameters_m
+
+    IMPLICIT NONE
+
+    !----- Operator: Hamiltonian ----------------------------
+    real (kind=Rk)            :: para_H(:,:)
+    integer                   :: nb_diago,max_diago,max_it
+    real (kind=Rk)            :: psi(:,:)
+    real (kind=Rk)            :: Ene(max_diago)
+    logical, parameter        :: temp_logi = .false.
+    !------ working parameters --------------------------------
+    real (kind=Rk)              :: ZPE
+    real (kind=Rk), allocatable :: Evec(:)
+
+!     %-----------------------------%
+!     | Define leading dimensions   |
+!     | for all arrays.             |
+!     | MAXN:   Maximum dimension   |
+!     |         of the A allowed.   |
+!     | MAXNEV: Maximum NEV allowed |
+!     | MAXNCV: Maximum NCV allowed |
+!     %-----------------------------%
+    integer  (kind=4)            :: maxn, maxnev, maxncv, ldv
+!     %--------------%
+!     | Local Arrays |
+!     %--------------%
+    real(kind=Rk), allocatable    :: v(:,:),workl(:),workd(:),workev(:),d(:,:),resid(:),ax(:)
+    logical, allocatable          :: select(:)
+    integer  (kind=4)             :: iparam(11), ipntr(14)
+
+!     %---------------%
+!     | Local Scalars |
+!     %---------------%
+    character (len=1)             :: bmat
+    character (len=2)             :: which
+    integer (kind=4)              :: ido, n, nev, ncv, lworkl, info, ierr, j
+    integer (kind=4)              :: nconv, maxitr, mode, ishfts
+    logical                       :: rvec,first
+    logical                       :: if_deq0=.FALSE. ! for MPI
+    real(kind=Rk)                 :: tol, sigmar, sigmai
+    integer (kind=4)              :: it
+!     %-----------------------------%
+!     | BLAS & LAPACK routines used |
+!     %-----------------------------%
+    real(kind=Rk)                 ::  dnrm2,dlapy2
+    external                      :: dnrm2, dlapy2, daxpy
+
+!----- for debuging --------------------------------------------------
+    integer                       :: err_mem,memory
+    character (len=*), parameter  :: name_sub='Diago_Arpack'
+    !logical, parameter           :: debug=.FALSE.
+    logical, parameter            :: debug=.TRUE.
+!-----------------------------------------------------------
+    IF (debug) THEN
+      write(out_unitp,*) 'BEGINNING ',name_sub
+      write(out_unitp,*) ' nb_diago',nb_diago
+      write(out_unitp,*) ' max_diago',max_diago
+      write(out_unitp,*)
+      !  CALL flush_perso(out_unitp)
+    END IF
+!-----------------------------------------------------------
+
+!------ initialization -------------------------------------
+
+    n = size(Para_H, dim=1)
+
+    IF (nb_diago == 0) THEN
+      write(out_unitp,*) ' ERROR in ',name_sub
+      write(out_unitp,*) ' nb_diago=0 is not possible with ARPACK'
+      STOP
+    END IF
+
+    nev =  int(nb_diago,kind=4)
+    ncv =  2*nev+10
+    ncv =  3*nev+10
+      !was ncv =  2*nev+10
+    ncv = MIN(N,ncv)  ! prevent infor=-3 error:
+                      ! NCV must be greater than NEV and less than or equal to N.
+    maxn   = n
+    ldv    = maxn
+    maxnev = nev
+    maxncv = ncv
+
+    allocate(select(maxncv))
+    allocate(ax(maxn))
+    allocate(d(maxncv,3))
+    allocate(resid(maxn)) !< initial guess vector when infor=1
+    allocate(v(ldv,maxncv))
+    allocate(workd(3*maxn))
+    allocate(workev(3*maxncv))
+    allocate(workl(3*maxncv*maxncv+6*maxncv))
+    bmat  = 'I'
+    which = 'SR'
+
+!     %--------------------------------------------------%
+!     | The work array WORKL is used in DSAUPD as        |
+!     | workspace.  Its dimension LWORKL is set as       |
+!     | illustrated below.  The parameter TOL determines |
+!     | the stopping criterion.  If TOL<=0, machine      |
+!     | precision is used.  The variable IDO is used for |
+!     | reverse communication and is initially set to 0. |
+!     | Setting INFO=0 indicates that a random vector is |
+!     | generated in DSAUPD to start the Arnoldi         |
+!     | iteration.                                       |
+!     %--------------------------------------------------%
+
+    lworkl = 3*ncv**2+6*ncv
+    tol    = ZERO
+    !tol    = ONETENTH**6
+
+    ido    = 0
+    info   = 0
+
+!     %---------------------------------------------------%
+!     | This program uses exact shifts with respect to    |
+!     | the current Hessenberg matrix (IPARAM(1) = 1).    |
+!     | IPARAM(3) specifies the maximum number of Arnoldi |
+!     | iterations allowed.  Mode 1 of DSAUPD is used     |
+!     | (IPARAM(7) = 1).  All these options may be        |
+!     | changed by the user. For details, see the         |
+!     | documentation in DSAUPD.                          |
+!     %---------------------------------------------------%
+
+    ishfts = 1
+    maxitr = int(min(max_diago,max_it),kind=4)
+    mode   = 1
+    iparam(1) = ishfts
+    iparam(3) = maxitr
+    iparam(7) = mode
+
+!     %-------------------------------------------%
+!     | M A I N   L O O P (Reverse communication) |
+!     %-------------------------------------------%
+    it = 0
+    DO
+      it = it +1
+!       %---------------------------------------------%
+!       | Repeatedly call the routine DNAUPD and take |
+!       | actions indicated by parameter IDO until    |
+!       | either convergence is indicated or maxitr   |
+!       | has been exceeded.                          |
+!       %---------------------------------------------%
+
+      write(out_unitp,*) 'it,ido,n,tol,ncv,iparam,info,lworkl',it,ido,n,tol,ncv,info,lworkl
+      write(out_unitp,*) "shape(iparam),=",shape(iparam)
+      write(out_unitp,*) "shape(workd,)=,",shape(workd)
+      write(out_unitp,*) "shape(workl),=",shape(workl)
+      write(out_unitp,*) "shape(v),=",shape(v)
+
+      call dnaupd(ido, bmat, n, which, nev, tol, resid,                 &
+                ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info)
+
+      write(out_unitp,*) 'test'
+      write(out_unitp,*) 'it,ido,n,tol,ncv,iparam,info,lworkl',it,ido,n,tol,ncv,info,lworkl
+      write(out_unitp,*) "shape(iparam),=",shape(iparam)
+      write(out_unitp,*) "shape(workd,)=,",shape(workd)
+      write(out_unitp,*) "shape(workl),=",shape(workl)
+      write(out_unitp,*) "shape(v),=",shape(v)
+      write(out_unitp,*) 'it,ido',it,ido
+      write(out_unitp,*) ",shape(workd(ipntr(2):ipntr(2)-1+n)),=",shape(workd(ipntr(2):ipntr(2)-1+n))
+      write(out_unitp,*) "shape(para_H),=",shape(para_H)
+      Stop "RObert"
+      IF (abs(ido) /= 1) EXIT
+!       %--------------------------------------%
+!       | Perform matrix vector multiplication |
+!       |              y <--- OP*x             |
+!       | The user should supply his/her own   |
+!       | matrix vector multiplication routine |
+!       | here that takes workd(ipntr(1)) as   |
+!       | the input, and return the result to  |
+!       | workd(ipntr(2)).                     |
+!       %--------------------------------------%
+!a rajouter H:psi
+!workd(ipntr(2):ipntr(2)-1+n) = H:workd(ipntr(1):ipntr(1)-1+n)
+
+
+
+     workd(ipntr(2):ipntr(2)-1+n) = Matmul(para_H,workd(ipntr(2):ipntr(2)-1+n))
+
+     write(out_unitp,*) 'Arpack <psi H psi>:',                                        &
+                  dot_product(workd(ipntr(1):ipntr(1)-1+n),workd(ipntr(2):ipntr(2)-1+n))
+
+  END DO
+
+
+!---------------------------------------------------------------------------------------
+
+!     %----------------------------------------%
+!     | Either we have convergence or there is |
+!     | an error.                              |
+!     %----------------------------------------%
+
+  IF ( info .lt. 0 ) THEN
+
+!       %--------------------------%
+!       | Error message. Check the |
+!       | documentation in DSAUPD. |
+!       %--------------------------%
+
+    write(out_unitp,*)
+    write(out_unitp,*) ' Error with _saupd, info = ', info
+    write(out_unitp,*) ' Check documentation in _naupd '
+    write(out_unitp,*) ' '
+        !write(out_unitp,*) ' Error with _saupd, info = ', info
+
+  ELSE
+
+!       %-------------------------------------------%
+!       | No fatal errors occurred.                 |
+!       | Post-Process using DSEUPD.                |
+!       |                                           |
+!       | Computed eigenvalues may be extracted.    |
+!       |                                           |
+!       | Eigenvectors may also be computed now if  |
+!       | desired.  (indicated by rvec = .true.)    |
+!       %-------------------------------------------%
+
+    rvec = .true.
+
+    call dneupd(rvec, 'A', select, d, d(1,2), v, ldv,                           &
+                      sigmar, sigmai, workev, bmat, n, which, nev, tol,    &
+               resid, ncv, v, ldv, iparam, ipntr, workd, workl,lworkl, ierr )
+
+!       %-----------------------------------------------%
+!       | The real part of the eigenvalue is returned   |
+!       | in the first column of the two dimensional    |
+!       | array D, and the imaginary part is returned   |
+!       | in the second column of D.  The corresponding |
+!       | eigenvectors are returned in the first NEV    |
+!       | columns of the two dimensional array V if     |
+!       | requested.  Otherwise, an orthogonal basis    |
+!       | for the invariant subspace corresponding to   |
+!       | the eigenvalues in D is returned in V.        |
+!       %-----------------------------------------------%
+    IF ( ierr .ne. 0) THEN
+
+!         %------------------------------------%
+!         | Error condition:                   |
+!         | Check the documentation of _neupd  |
+!         %------------------------------------%
+
+      write(out_unitp,*)
+      write(out_unitp,*) ' Error with _seupd, info = ', ierr
+      write(out_unitp,*) ' Check the documentation of _neupd. '
+      write(out_unitp,*)
+
+    ELSE
+
+      first  = .true.
+      nconv  = iparam(5)
+
+      DO j=1, nconv
+!           %---------------------------%
+!           | Compute the residual norm |
+!           |                           |
+!           |   ||  A*x - lambda*x ||   |
+!           |                           |
+!           | for the NCONV accurately  |
+!           | computed eigenvalues and  |
+!           | eigenvectors.  (iparam(5) |
+!           | indicates how many are    |
+!           | accurate to the requested |
+!           | tolerance)                |
+!           %---------------------------%
+
+        IF  (temp_logi) THEN
+
+!             %--------------------%
+!             | Ritz value is real |
+!             %--------------------%
+        Ax = Matmul(para_H,v(:,j))
+              !CALL sub_OpV1_TO_V2_Arpack(v(:,j),ax,psi(j),Hpsi_loc,                    &
+                                  ! para_H,cplxE,para_propa,int(n,4))
+        call daxpy(n, -d(j,1), v(1,j), 1, ax, 1)
+        d(j,3) = dnrm2(n, ax, 1)
+        d(j,3) = d(j,3) / abs(d(j,1))
+        Ene(j)          = d(j,1)
+
+      ELSE IF (first) THEN
+
+!             %------------------------%
+!             | Ritz value is complex. |
+!             | Residual of one Ritz   |
+!             | value of the conjugate |
+!             | pair is computed.      |
+!             %------------------------%
+              !call av(nx, v(1,j), ax)
+         Ax= matmul(para_H,v(:,j))
+              !CALL sub_OpV1_TO_V2_Arpack(v(:,j),ax,psi(j),Hpsi_loc,                    &
+                                  !       para_H,cplxE,para_propa,int(n,4))
+
+          call daxpy(n, -d(j,1), v(1,j), 1, ax, 1)
+          call daxpy(n, d(j,2), v(1,j+1), 1, ax, 1)
+          d(j,3) = dnrm2(n, ax, 1)
+          Ene(j) = d(j,1)
+
+          Ax = matmul(para_H,v(:,j+1))
+        !CALL sub_OpV1_TO_V2_Arpack(v(:,j+1),ax,psi(j+1),Hpsi_loc,&
+                                      !  para_H,cplxE,para_propa,int(n,4))
+
+          Ene(j+1)  = d(j,1)
+          call daxpy(n, -d(j,2), v(1,j), 1, ax, 1)
+          call daxpy(n, -d(j,1), v(1,j+1), 1, ax, 1)
+          d(j,3) = dlapy2( d(j,3), dnrm2(n, ax, 1) )
+          d(j,3) = d(j,3) / dlapy2(d(j,1),d(j,2))
+          d(j+1,3) = d(j,3)
+          first = .false.
+      ELSE
+              first = .true.
+    END IF
+
+    IF (debug) write(out_unitp,*) 'j,cplx ene ?',j,Ene(j)
+
+    END DO ! for j=1, nconv
+
+!         %-----------------------------%
+!         | Display computed residuals. |
+!         %-----------------------------%
+
+  END IF ! for ierr .ne. 0
+
+!       %-------------------------------------------%
+!       | Print additional convergence information. |
+!       %-------------------------------------------%
+
+  IF ( info .eq. 1) THEN
+    print *, ' '
+    print *, ' Maximum number of iterations reached.'
+    print *, ' '
+  ELSE IF ( info .eq. 3) THEN
+    print *, ' '
+    print *, ' No shifts could be applied during implicit',    &
+                   ' Arnoldi update, try increasing NCV.'
+    print *, ' '
+  END IF
+
+  print *, ' '
+  print *, ' _NDRV1 '
+  print *, ' ====== '
+  print *, ' '
+  print *, ' Size of the matrix is ', n
+  print *, ' The number of Ritz values requested is ', nev
+  print *, ' The number of Arnoldi vectors generated (NCV) is ', ncv
+  print *, ' What portion of the spectrum: ', which
+  print *, ' The number of converged Ritz values is ',nconv
+  print *, ' The number of Implicit Arnoldi update',             &
+                 ' iterations taken is ', iparam(3)
+  print *, ' The number of OP*x is ', iparam(9)
+  print *, ' The convergence criterion is ', tol
+  print *, ' '
+
+ END IF ! for info .lt. 0
+
+ nb_diago = nconv
+
+      !CALL trie_psi(psi,Ene,nb_diago)
+
+ IF(allocated(v)) deallocate(v)
+ deallocate(workl)
+ deallocate(workd)
+ deallocate(d)
+ deallocate(resid)
+ deallocate(ax)
+ deallocate(select)
+
+!     %---------------------------%
+!     | Done with program dndrv1. |
+!     %---------------------------%
+
+!----------------------------------------------------------
+ IF (debug) THEN
+   ZPE = minval(Evec)
+   DO j=1,nb_diago
+     write(out_unitp,*) j,Ene(j),(Evec(j)-ZPE)
+   END DO
+   write(out_unitp,*) 'END ',name_sub
+ END IF
+!----------------------------------------------------------
+END SUBROUTINE Diago_Arpack
 
 
 END MODULE diago_m

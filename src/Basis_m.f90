@@ -93,7 +93,7 @@ RECURSIVE FUNCTION Basis_IS_allocated(Basis) RESULT(alloc)
         alloc = alloc .AND. allocated(Basis%d2gg)
       END IF
 
-    END FUNCTION Basis_IS_allocatedtot
+  END FUNCTION Basis_IS_allocatedtot
 
   RECURSIVE SUBROUTINE Write_Basis(Basis)
   USE UtilLib_m

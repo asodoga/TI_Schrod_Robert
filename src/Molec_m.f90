@@ -222,7 +222,7 @@ module Molec_m
        QQML(1)= Q(3)
        QQML(2)= HALF*(Q(1)+Q(2))
        QQML(3)= HALF*(Q(1)-Q(2))
-      CASE ('sym')
+     CASE ('SYM')
        QQML(1)= Q(1)
        QQML(2)= Q(2)
        QQML(3)= Q(3)
@@ -233,7 +233,7 @@ module Molec_m
       CALL sub_Qmodel_V(Mat_V,QQML)
       !write(*,*) "Mat_V",Mat_V
       Calc_pot = Mat_V(1,1)
-    CASE ('local')
+    CASE ('Local')
       Calc_pot = HALF * dot_product( Q,Q)! 0.5*x^2
      !Calc_pot =  dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! x^2+x^4
      !Calc_pot =  -TEN * dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! -10x^2+x^4

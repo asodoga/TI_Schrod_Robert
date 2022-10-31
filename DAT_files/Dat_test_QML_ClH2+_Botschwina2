@@ -1,12 +1,10 @@
+&pot coord_type='CURV' sym_type='SYM' Model_type='QML' V0=0.0  /
 &potential
   pot_name='ClH2+_Botschwina' ! potential surface name
   option=2
    /
-   &pot coord_type='CURV' sym_type='SYM' Model_type='QML' V0=0.0  /
+
    &basis_nD name='Dp' nb_basis=3   /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=   4.7329070204508570 Q0=2.4623131523 /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=  5.5886498963089206  Q0=2.4623131523 /
-   &basis_nD name='herm'   nb=8 nq=12 SCALEQ=  5.8743289964491483  Q0=1.6448681002/
-
-
-   
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  4.7329070204508570 Q0=2.4623131523 /
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  5.5886498963089206  Q0=2.4623131523 /
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  5.8743289964491483  Q0=1.6448681002/
