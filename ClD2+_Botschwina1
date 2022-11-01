@@ -1,0 +1,35 @@
+ begining: max threads?           4
+ pot_name,option: read_model           0
+ ndim,nsurf     :            0           0
+ =================================================
+ =================================================
+ == QML: Quantum Model Lib (E-CAM) ===============
+ == QML version:       9.1                 
+ == QML path:          /home/robert/robert2/CODE_CORECT/QuantumModelLib
+ -------------------------------------------------
+ == Compiled on       "robert-Latitude-E6410" the mer. 24 août 2022 - 13:46:51
+ == Compiler:         gfortran
+ == Compiler version: GNU Fortran (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+ == Compiler options: -O5 -g -fbacktrace -fopenmp -funroll-loops -ftree-vectorize -falign-loops=16
+ == Compiler libs:     -llapack -lblas
+ -------------------------------------------------
+ QML is under GNU LGPL3 license and 
+   is written by David Lauvergnat [1]
+   with contributions of
+      Félix MOUHAT [2]
+      Liang LIANG [3]
+      Emanuele MARSILI [1,4]
+
+ [1]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+ [2]: Laboratoire PASTEUR, ENS-PSL-Sorbonne Université-CNRS, France
+ [3]: Maison de la Simulation, CEA-CNRS-Université Paris-Saclay,France
+ [4]: Durham University, Durham, UK
+ =================================================
+ =================================================
+ == Initialization of the Model ==================
+ Reading input file . . .
+  ERROR in Read_Model
+  End-of-file or End-of-record
+  The namelist "potential" is probably absent
+  check your data!
+
