@@ -24,6 +24,10 @@
 ![2]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
 
 !===============================================================================
+!The main program which uses the subroutines of the other modules to solve
+!the multidimensional Schrodinger equation using the direct product to evaluate
+!the multiple integrations and then using the Smolyak Scheme
+!===============================================================================
 PROGRAM TI_Schrod
   USE NumParameters_m
   USE Basis_m
@@ -34,35 +38,35 @@ PROGRAM TI_Schrod
 
   IMPLICIT NONE
 
-  TYPE (Basis_t), target      :: Basis
+  TYPE (Basis_t)              :: Basis
   TYPE (psi_t)                :: psi,Hpsi
   TYPE (op_t)                 :: Op
-!  TYPE (NDindex_t)            :: NDindex
   TYPE (Molec_t)              :: Molec
- !==============================================================================
- ! for QML
-  REAL(kind=Rk), ALLOCATABLE  :: QQML(:)
-  REAL(kind=Rk), ALLOCATABLE  :: Q(:)
-  REAL(kind=Rk), ALLOCATABLE  :: Mat_V(:,:)
-  REAL(kind=Rk)               :: V,Calc_pot1
-  integer                     :: ndim,nsurf,option
-  logical                     :: adiabatic
-  character (len=16)          :: pot_name
 
+  !====================================================================================
+  !Allows you to read the information on the library used or not and the information
+  !on the potential V of the systems being studied
   CALL Read_Molec(Molec,in_unitp)
 
-  !STOP
-  !===================================================================
+  !====================================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
   CALL Read_Basis(Basis,nio=in_unitp)
 
+  !====================================================================================
+  !The transfer of previously read information to the rest of the program
   CALL Set_op(Op,Basis,Molec) ! to be change
+
+  !====================================================================================
+  !The action of the Hamiltonian operator on the wave packet and
+  !the construction of the Hamiltonian matrix
   CALL Make_Mat_OP(Op)
+  !====================================================================================
+  !The diagonalization of the Hamiltonian matrix
   CALL Diago_Op(Op)
-
+  !====================================================================================
+  !Deallocating arrays allocated during the program
   write(out_unitp,*) 'deallocation'
-
   CALL dealloc_Op(OP)
   CALL dealloc_psi(psi)
   CALL dealloc_psi(Hpsi)
