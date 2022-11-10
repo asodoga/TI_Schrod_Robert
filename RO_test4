@@ -1,0 +1,198 @@
+ begining: max threads?           4
+ pot_name,option: read_model           0
+ ndim,nsurf     :            0           0
+ =================================================
+ =================================================
+ == QML: Quantum Model Lib (E-CAM) ===============
+ == QML version:       9.1                 
+ == QML path:          /home/robert/robert2/Librairie/QuantumModelLib
+ -------------------------------------------------
+ == Compiled on       "robert-Latitude-E6410" the sam. 22 oct. 2022 - 10:45:52
+ == Compiler:         gfortran
+ == Compiler version: GNU Fortran (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+ == Compiler options: -O5 -g -fbacktrace -fopenmp -funroll-loops -ftree-vectorize -falign-loops=16
+ == Compiler libs:     -llapack -lblas
+ -------------------------------------------------
+ QML is under GNU LGPL3 license and 
+   is written by David Lauvergnat [1]
+   with contributions of
+      Félix MOUHAT [2]
+      Liang LIANG [3]
+      Emanuele MARSILI [1,4]
+
+ [1]: Institut de Chimie Physique, UMR 8000, CNRS-Université Paris-Saclay, France
+ [2]: Laboratoire PASTEUR, ENS-PSL-Sorbonne Université-CNRS, France
+ [3]: Maison de la Simulation, CEA-CNRS-Université Paris-Saclay,France
+ [4]: Durham University, Durham, UK
+ =================================================
+ =================================================
+ == Initialization of the Model ==================
+ Reading input file . . .
+ Non-adiabatic potential . . .
+ pot_name_loc: clh2+
+ Non-adiabatic potential . . .
+ =================================================
+  Quantum Model
+ -----------------------------------------------
+ Output file for potential library
+ ClH2p current parameters
+
+ ---------------------------------------
+          Internal coordinates          
+                                        
+       H                                
+        \                               
+     R2  \ a                            
+          Cl------------H               
+               R1                       
+                                        
+   Coordinates (option 1,3,5):          
+   Q(1) = a          (Radian)           
+   Q(2) = 1/2(R1+R2) (Bohr)             
+   Q(3) = 1/2(R1-R2) (Bohr)             
+                                        
+   Coordinates (option 2,4,6):          
+   Q(1) = R1         (Bohr)             
+   Q(2) = R2         (Bohr)             
+   Q(3) = a          (Radian)           
+                                        
+   V           (Hartree)                
+                                        
+  Options (default: 6)                  
+  1,2: B3LYP/cc-pVTZ 1st version (do not use)
+  3,4: B3LYP/cc-pVTZ 2d  version        
+  5,6: CCSD(T)-F12b/cc-pVTZ-F12         
+                                        
+ Ref: unpublished
+ ---------------------------------------
+   PubliUnit:       F
+
+   Option   :                 6
+
+ ---------------------------------------
+                                        
+                                        
+   Level: CCSD(T)-F12b/cc-pVTZ-F12      
+   Minimum:                             
+   Q(1) = R1   = 2.4673412575 (Bohr)    
+   Q(2) = R2   = 2.4673412575 (Bohr)    
+   Q(3) = a    = 1.6459159559 (Rad)     
+                                        
+   V = -460.5905268800 Hartree          
+  grad(:) =[ 0.0000141837, 0.0000141837,
+             0.0000060177]              
+  hess    =[0.282002648,0.001648555,0.005402383
+            0.001648555,0.282002648,0.005402383
+            0.005402383,0.005402383,0.167709143]
+                                        
+ The constant metric tensor is obtained 
+  with Tnum at the minimun.             
+                                        
+ ---------------------------------------
+
+ end ClH2p current parameters
+
+ d0GGdef: 1        0.000560008      -0.000001177      -0.000006340
+ d0GGdef: 2       -0.000001177       0.000560008      -0.000006340
+ d0GGdef: 3       -0.000006340      -0.000006340       0.000184365
+
+  Q0:       2.4673412575       2.4673412575       1.6459159559
+
+ -----------------------------------------------
+ Extra action(s):
+ opt F
+ irc F
+ -----------------------------------------------
+ =================================================
+ =================================================
+           1 ScaleQ(inb)=   4.7371233037873681     
+           2 ScaleQ(inb)=   4.7371233037873681     
+           3 ScaleQ(inb)=   5.4918626483228952     
+&BASIS_ND
+ NAME="Dp                  ",
+ NB_BASIS=3          ,
+ NB=0          ,
+ NQ=0          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  1.0000000000000000     ,
+ Q0=  0.0000000000000000     ,
+ /
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=3          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  4.7300000000000004     ,
+ Q0=  2.4600000000000000     ,
+ /
+ S: 1        1.000000000       0.000000000       0.000000000
+ S: 2        0.000000000       1.000000000       0.000000000
+ S: 3        0.000000000       0.000000000       1.000000000
+ Sii,Sij   3.1123992272341638E-012   1.1102230246251565E-016
+
+
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=3          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  4.7300000000000004     ,
+ Q0=  2.4600000000000000     ,
+ /
+ S: 1        1.000000000       0.000000000       0.000000000
+ S: 2        0.000000000       1.000000000       0.000000000
+ S: 3        0.000000000       0.000000000       1.000000000
+ Sii,Sij   3.1123992272341638E-012   1.1102230246251565E-016
+
+
+&BASIS_ND
+ NAME="herm                ",
+ NB_BASIS=0          ,
+ NB=3          ,
+ NQ=4          ,
+ A=  0.0000000000000000     ,
+ B=  0.0000000000000000     ,
+ SCALEQ=  5.8799999999999999     ,
+ Q0=  1.6499999999999999     ,
+ /
+ S: 1        1.000000000       0.000000000       0.000000000
+ S: 2        0.000000000       1.000000000       0.000000000
+ S: 3        0.000000000       0.000000000       1.000000000
+ Sii,Sij   3.1121771826292388E-012   0.0000000000000000     
+
+
+
+
+ eigenvalues = 
+ nEigenValE_n-E_1omega
+           1   3330.5848652463369      DifEigen(ib)   0.0000000000000000     
+           2   4536.1028806919321      DifEigen(ib)   1205.5180154455952     
+           3   4723.3372828995343      DifEigen(ib)   1392.7524176531974     
+           4   5622.8993985533825      DifEigen(ib)   2292.3145333070456     
+           5   5628.4005510597926      DifEigen(ib)   2297.8156858134557     
+           6   6774.2361620169831      DifEigen(ib)   3443.6512967706462     
+           7   6789.4114954127781      DifEigen(ib)   3458.8266301664412     
+           8   6969.6779915277357      DifEigen(ib)   3639.0931262813988     
+           9   6977.5085918478189      DifEigen(ib)   3646.9237266014820     
+          10   7897.1467413529472      DifEigen(ib)   4566.5618761066107     
+          11   7898.4850987471236      DifEigen(ib)   4567.9002335007863     
+          12   7927.3763677555926      DifEigen(ib)   4596.7915025092552     
+          13   9032.4061244556942      DifEigen(ib)   5701.8212592093569     
+          14   9206.1545525330966      DifEigen(ib)   5875.5696872867593     
+          15   9233.2654156750996      DifEigen(ib)   5902.6805504287622     
+          16   9256.6068928988843      DifEigen(ib)   5926.0220276525470     
+          17   9428.5653643091355      DifEigen(ib)   6097.9804990627981     
+          18   9436.3935010799814      DifEigen(ib)   6105.8086358336441     
+          19   10173.162469368834      DifEigen(ib)   6842.5776041224963     
+          20   10190.728769407966      DifEigen(ib)   6860.1439041616286     
+
+
+ Qmoy(inb)   2.5030853198815741     
+ Qmoy(inb)   2.5030853090337319     
+ Qmoy(inb)   1.6458010594750059     
+ deallocation

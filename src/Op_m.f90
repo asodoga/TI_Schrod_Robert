@@ -75,7 +75,7 @@ CONTAINS
   END SUBROUTINE dealloc_Op
 
   SUBROUTINE Write_Op(Op)
-    USE UtilLib_m, only : Write_RMat
+  USE UtilLib_m, only : Write_RMat
     TYPE(Op_t), intent(in) :: Op
     IF (associated(Op%Basis)) THEN
       Write(out_unitp,*) ' The basis is linked to Op.'
@@ -94,9 +94,9 @@ CONTAINS
 
 
  SUBROUTINE Set_Op(Op,Basis,Molec)
-  USE Basis_m
-  USE Molec_m
-  USE NDindex_m
+ USE Basis_m
+ USE Molec_m
+ USE NDindex_m
 
   TYPE(Op_t),     intent(inout)       :: Op
   TYPE (Basis_t), intent(in),  target :: Basis
@@ -143,8 +143,8 @@ CONTAINS
  END SUBROUTINE Set_Op
 
  SUBROUTINE Set_grid_Op(Op)
-  USE Basis_m
-  USE NDindex_m
+ USE Basis_m
+ USE NDindex_m
   TYPE(Op_t),     intent(inout)       :: Op
   Real(kind=Rk)                       :: F,Vep,V
   Real(kind=Rk), allocatable          :: Q(:),F2(:,:),F1(:)
@@ -153,7 +153,7 @@ CONTAINS
   Logical                             :: Endloop_q
   Logical                             :: Endloop_b
   Integer, allocatable                :: tab_iq(:)
-  Integer                             :: ib,iq,inb
+  Integer                             :: ib,iq,inb,iterm,Nterm=10
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING Set_grid_Op'
     Call Write_basis(Op%Basis)
@@ -162,53 +162,29 @@ CONTAINS
   Allocate(Q(size(Op%Basis%tab_basis)))
   Allocate(F1(size(Op%Basis%tab_basis)))
   Allocate(F2(size(Op%Basis%tab_basis),size(Op%Basis%tab_basis)))
-  Allocate(Op%Grid(14))
-  Allocate(Op%Grid(1)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(2)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(3)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(4)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(5)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(6)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(7)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(8)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(9)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(10)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(11)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(12)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(13)%Vec(Op%Basis%nq))
-  Allocate(Op%Grid(14)%Vec(Op%Basis%nq))
 
-  Op%Grid(1)%DerivIndex(1)  = 0
-  Op%Grid(1)%DerivIndex(2)  = 0
-  Op%Grid(2)%DerivIndex(1)  = 1
-  Op%Grid(2)%DerivIndex(2)  = 1
-  Op%Grid(3)%DerivIndex(1)  = 1
-  Op%Grid(3)%DerivIndex(2)  = 2
-  Op%Grid(4)%DerivIndex(1)  = 1
-  Op%Grid(4)%DerivIndex(2)  = 3
-  Op%Grid(5)%DerivIndex(1)  = 2
-  Op%Grid(5)%DerivIndex(2)  = 1
-  Op%Grid(6)%DerivIndex(1)  = 2
-  Op%Grid(6)%DerivIndex(2)  = 2
-  Op%Grid(7)%DerivIndex(1)  = 2
-  Op%Grid(7)%DerivIndex(2)  = 3
-  Op%Grid(8)%DerivIndex(1)  = 3
-  Op%Grid(8)%DerivIndex(2)  = 1
-  Op%Grid(9)%DerivIndex(1)  = 3
-  Op%Grid(9)%DerivIndex(2)  = 2
-  Op%Grid(10)%DerivIndex(1) = 3
-  Op%Grid(10)%DerivIndex(2) = 3
-  Op%Grid(11)%DerivIndex(1) = 1
-  Op%Grid(11)%DerivIndex(2) = 0
-  Op%Grid(12)%DerivIndex(1) = 2
-  Op%Grid(12)%DerivIndex(2) = 0
-  Op%Grid(13)%DerivIndex(1) = 3
-  Op%Grid(13)%DerivIndex(2) = 0
-  Op%Grid(14)%DerivIndex(1) = 0
-  Op%Grid(14)%DerivIndex(2) = 0
-!robert
+  Allocate(Op%Grid(Nterm))
+
+  Do iterm=1,size(Op%Grid)
+  Allocate(Op%Grid(iterm)%Vec(Op%Basis%nq))
+  END DO
+
+  Op%Grid(1)%DerivIndex(:)  = [0,0]
+  Op%Grid(2)%DerivIndex(:)  = [1,1]
+  Op%Grid(3)%DerivIndex(:)  = [1,2]
+  Op%Grid(4)%DerivIndex(:)  = [1,3]
+  Op%Grid(5)%DerivIndex(:)  = [2,2]
+  Op%Grid(6)%DerivIndex(:)  = [2,3]
+  Op%Grid(7)%DerivIndex(:)  = [3,3]
+  Op%Grid(8)%DerivIndex(:)  = [1,0]
+  Op%Grid(9)%DerivIndex(:)  = [2,0]
+  Op%Grid(10)%DerivIndex(:) = [3,0]
+
+
   Open(1,file='Pot_r.dat',status='replace')
+
   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
   Iq=0
   DO
@@ -220,24 +196,25 @@ CONTAINS
    END DO
    Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
    Call Calc_potsub(V,Q,Op%Molec)
-   Write(1,*) Q,V
-   Op%Grid(1)%Vec(Iq)  = V
-   Op%Grid(2)%Vec(Iq)  = F2(1,1)
-   Op%Grid(3)%Vec(Iq)  = F2(1,2)
-   Op%Grid(4)%Vec(Iq)  = F2(1,3)
-   Op%Grid(5)%Vec(Iq)  = F2(2,1)
-   Op%Grid(6)%Vec(Iq)  = F2(2,2)
-   Op%Grid(7)%Vec(Iq)  = F2(2,3)
-   Op%Grid(8)%Vec(Iq)  = F2(3,1)
-   Op%Grid(9)%Vec(Iq)  = F2(3,2)
-   Op%Grid(10)%Vec(Iq) = F2(3,3)
-   Op%Grid(11)%Vec(Iq) = F1(1)
-   Op%Grid(12)%Vec(Iq) = F1(2)
-   Op%Grid(13)%Vec(Iq) = F1(3)
-   Op%Grid(14)%Vec(Iq) = Vep
+
+   !Write(1,*) Q,V
+
+   Op%Grid(1)%Vec(Iq)  =   V+Vep
+   Op%Grid(2)%Vec(Iq)  =   F2(1,1)
+   Op%Grid(3)%Vec(Iq)  =   F2(1,2)
+   Op%Grid(4)%Vec(Iq)  =   F2(1,3)
+   Op%Grid(5)%Vec(Iq)  =   F2(2,2)
+   Op%Grid(6)%Vec(Iq)  =   F2(2,3)
+   Op%Grid(7)%Vec(Iq)  =   F2(3,3)
+   Op%Grid(8)%Vec(Iq)  =   F1(1)
+   Op%Grid(9)%Vec(Iq)  =   F1(2)
+   Op%Grid(10)%Vec(Iq) =   F1(3)
+
   END DO
   Close(1)
+
   Deallocate(Tab_iq)
+
   IF (debug) THEN
     Write(out_unitp,*) 'END Set_drid_Op'
     flush(out_unitp)
@@ -245,14 +222,14 @@ CONTAINS
  END SUBROUTINE Set_grid_op
 
  SUBROUTINE Make_Mat_OP(Op)
-  USE Molec_m
-  USE Basis_m
+ USE Molec_m
+ USE Basis_m
   TYPE (Op_t),     intent(inout)      :: Op
   !Logical,          parameter         :: debug = .true.
   Logical,         parameter          :: debug = .false.
-  Integer                             :: ib,iq,jb
+  Integer                             :: ib,iq,jb,ib1,ib2
   Real (kind=Rk), allocatable         :: Psi_g(:)
-  Real (kind=Rk), allocatable         :: Psi_b(:)!,Psi_g(:)
+  Real (kind=Rk), allocatable         :: Psi_b(:)
   Real (kind=Rk), allocatable         :: OpPsi_g(:)
 
   IF (debug) THEN
@@ -270,9 +247,9 @@ CONTAINS
   DO ib = 1,Op%Basis%nb
     Psi_b(:)  = ZERO
     Psi_b(ib) = ONE
-    Call BasisTOGrid_Basis(Psi_g, Psi_b,Op%Basis)
+    Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
     Call OpPsi_grid(OpPsi_g,Psi_g,Op)
-    Call GridTOBasis_Basis(Op%RMat(:,ib), OpPsi_g,Op%Basis)
+    Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
   END DO
 
   Deallocate(Psi_b)
@@ -299,77 +276,78 @@ CONTAINS
   Real (kind=Rk), allocatable         :: Qmoy(:), Rho_r(:,:), omega(:)
   Real (kind=Rk)                      :: W,Wr
 
-   IF (debug) THEN
+  IF (debug) THEN
      Write(out_unitp,*) 'BEGINNING Diago_Op'
      flush(out_unitp)
-   END IF
-   Allocate(Psi_g(Op%Basis%nq))
-   Allocate(DifEigen(Op%Basis%nb))
-   !Allocate(omega(Op%Basis%nb))
-   Allocate(EigenVal(Op%Basis%nb))
-   Allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
-   !Call Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
-   !Call Diago_Arpack(EigenVec,EigenVal,Op%Basis%nb,Op%Basis%nb,Op%Basis%nb,Op%RMat)
-   Call  diagonalization(Op%RMat,EigenVal,EigenVec,Op%Basis%nb)
-   Write(out_unitp,*)
-   Write(out_unitp,*)
-   Write(out_unitp,*) 'eigenvalues = '
-   Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
-   DO ib=1,20!Op%Basis%nb
-     DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
-     Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
+  END IF
+  Allocate(Psi_g(Op%Basis%nq))
+  Allocate(DifEigen(Op%Basis%nb))
+  !Allocate(omega(Op%Basis%nb))
+  Allocate(EigenVal(Op%Basis%nb))
+  Allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
+  !Call Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
+  !Call Diago_Arpack(EigenVec,EigenVal,Op%Basis%nb,Op%Basis%nb,Op%Basis%nb,Op%RMat)
+  Call  diagonalization(Op%RMat,EigenVal,EigenVec,Op%Basis%nb)
+  Write(out_unitp,*)
+  Write(out_unitp,*)
+  Write(out_unitp,*) 'eigenvalues = '
+  Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
+  DO ib=1,8!Op%Basis%nb
+    DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
+    Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
+  END DO
+
+  Write(out_unitp,*)
+  Write(out_unitp,*)
+
+  Call BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
+
+  Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
+  Allocate(Qmoy(size(Op%Basis%tab_basis)))
+  Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
+  Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+
+  Qmoy(:)=ZERO
+  Iq=0
+  DO
+   Iq=Iq+1
+   Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+   IF (Endloop_q) exit
+   W=1
+   Do inb=1,size(Op%Basis%tab_basis)
+    W =  W * Op%Basis%tab_basis(inb)%W(tab_iq(inb))
    END DO
 
-   Write(out_unitp,*)
-   Write(out_unitp,*)
+   W =  W*Psi_g(Iq)**2
 
-   Call BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
-
-   Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
-   Allocate(Qmoy(size(Op%Basis%tab_basis)))
-   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-
-   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-
-   Qmoy(:)=ZERO
-   Iq=0
-   DO
-    Iq=Iq+1
-    Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-    IF (Endloop_q) exit
-    W=1
-    Do inb=1,size(Op%Basis%tab_basis)
-     W =  W * Op%Basis%tab_basis(inb)%W(tab_iq(inb))
-    END DO
-
-    W =  W*Psi_g(Iq)**2
-
-    DO inb=1,size(Op%Basis%tab_basis)
-      Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb))*W
-      Rho_r(iq,inb)=  W /Op%Basis%tab_basis(inb)%W(tab_iq(inb))
-    END DO
-
+   DO inb=1,size(Op%Basis%tab_basis)
+    Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb))*W
+    Rho_r(iq,inb)=  W /Op%Basis%tab_basis(inb)%W(tab_iq(inb))
    END DO
-   DO inb = 1,size(Op%Basis%tab_basis)
+
+  END DO
+
+  DO inb = 1,size(Op%Basis%tab_basis)
     Write(out_unitp,*)'Qmoy(inb)',Qmoy(inb)
-   END DO
+  END DO
 
-   Open(1,file='Rho_r.dat',status='replace')
-   DO iq = 1,Op%Basis%nq,20
-     Write(1,*)iq, (Rho_r(iq,jb),jb=1,size(Op%Basis%tab_basis))
-   END DO
-   Close(1)
+  Open(1,file='Rho_r.dat',status='replace')
+  DO iq = 1,Op%Basis%nq,20
+    Write(1,*)iq, (Rho_r(iq,jb),jb=1,size(Op%Basis%tab_basis))
+  END DO
+  Close(1)
 
-   Deallocate(Rho_r)
-   Deallocate(Qmoy)
-   Deallocate(tab_iq)
-   Deallocate(EigenVal)
-   Deallocate(EigenVec)
+  Deallocate(Rho_r)
+  Deallocate(Qmoy)
+  Deallocate(tab_iq)
+  Deallocate(EigenVal)
+  Deallocate(EigenVec)
 
-   IF (debug) THEN
-     Write(out_unitp,*) 'END Diago_Op'
-     flush(out_unitp)
-   END IF
+  IF (debug) THEN
+    Write(out_unitp,*) 'END Diago_Op'
+    flush(out_unitp)
+  END IF
  END SUBROUTINE Diago_Op
 
  SUBROUTINE Potential(Op)
@@ -447,18 +425,22 @@ CONTAINS
   Integer,        intent(in)          :: iterm
   !Logical,          parameter         :: debug = .true.
   Logical,         parameter          :: debug = .false.
+
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING  KEO00Psi_grid'
     Call Write_op(op)
     Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
     flush(out_unitp)
   END IF
+
   OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)* Psi_g(:)
+
   IF (debug) THEN
     Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
     Write(out_unitp,*) 'END  KEO00Psi_grid'
     flush(out_unitp)
-   END IF
+  END IF
+
  END SUBROUTINE KEO00Psi_grid
 
 
@@ -485,6 +467,9 @@ CONTAINS
     Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
     flush(out_unitp)
   END IF
+
+  Allocate(KEO1psi_g(Op%Basis%nq))
+
  !!!!1) Action de d/dQi : k1_psi = d/dQi psi
   Iq1 = Product(Op%Basis%tab_basis(1:inq-1)%nq)
   Iq2 = Op%Basis%tab_basis(inq)%nq
@@ -492,13 +477,16 @@ CONTAINS
   OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO1Psi_g
   Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
   d1gg(1:Op%Basis%tab_basis(inq)%nq,1:Op%Basis%tab_basis(inq)%nq)=>Op%Basis%tab_basis(inq)%d1gg
-  DO i3=1,ubound(Psi_ggg,dim=3)
-  DO i1=1,ubound(Psi_ggg,dim=1)
+  DO i3 = 1,ubound(Psi_ggg,dim=3)
+  DO i1 = 1,ubound(Psi_ggg,dim=1)
      OpPsi_ggg(i1,:,i3) =  matmul(d1gg,Psi_ggg(i1,:,i3))
   END DO
   END DO
  !3) action de f1^j(Q) :  kpsi = f1^j(Q) * k1_psi
   OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)* KEO1Psi_g(:)
+
+  Deallocate(KEO1psi_g)
+
   IF (debug) THEN
     Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
     Write(out_unitp,*) 'END KEOiPsi_grid'
@@ -520,28 +508,34 @@ CONTAINS
   Real (kind=Rk), pointer             :: KEO1psi_g(:)
   Real (kind=Rk), pointer             :: KEO2psi_g(:)
   Real (kind=Rk), pointer             :: OpPsi_ggg(:,:,:)
- !Logical,          parameter         :: debug = .true.
+  !Logical,          parameter         :: debug = .true.
   Logical,         parameter          :: debug = .false.
   Integer                             :: iq,i1,i3
   Integer                             :: Iq1,Iq2,Iq3
+
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING KEOijPsi_grid'
     Call Write_op(op)
     Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
     flush(out_unitp)
   END IF
+
+  Allocate(KEO1psi_g(Op%Basis%nq))
+  Allocate(KEO2psi_g(Op%Basis%nq))
+
  !!!!1) Action de d/dQi : k1_psi = d/dQi psi
   Iq1 = Product(Op%Basis%tab_basis(1:inq1-1)%nq)
   Iq2 = Op%Basis%tab_basis(inq1)%nq
   Iq3 = Product(Op%Basis%tab_basis(size(Op%Basis%tab_basis):inq1+1:-1)%nq)
   OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO1Psi_g
   Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
-  d1gg(1:Op%Basis%tab_basis(inq1)%nq,1:Op%Basis%tab_basis(inq1)%nq)=>Op%Basis%tab_basis(inq1)%d1gg
+  d1gg(1:Op%Basis%tab_basis(inq1)%nq,1:Op%Basis%tab_basis(inq1)%nq) => Op%Basis%tab_basis(inq1)%d1gg
   DO i3=1,ubound(Psi_ggg,dim=3)
   DO i1=1,ubound(Psi_ggg,dim=1)
     OpPsi_ggg(i1,:,i3) = matmul(d1gg,Psi_ggg(i1,:,i3))
   END DO
   END DO
+
 !!!!2) Action de d/dQj :   k2_psi = d/dQj k1_psi
   Iq1 = Product(Op%Basis%tab_basis(1:inq2-1)%nq)
   Iq2 = Op%Basis%tab_basis(inq2)%nq
@@ -554,8 +548,13 @@ CONTAINS
     OpPsi_ggg(i1,:,i3) =  matmul(d1gg,Psi_ggg(i1,:,i3))
   END DO
   END DO
+
 !3) action de f2^ij(Q) :  kpsi = f2^ij(Q) * k2_psi
   OpPsi_g(:) = OpPsi_g(:) +   Op%Grid(iterm)%Vec(:)*KEO2Psi_g(:)
+
+  Deallocate(KEO1psi_g)
+  Deallocate(KEO2psi_g)
+
   IF (debug) THEN
      Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
      Write(out_unitp,*) 'END KEOijPsi_grid'
@@ -600,7 +599,7 @@ CONTAINS
   OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO2Psi_g
   Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
   d1gg(1:Op%Basis%tab_basis(inq)%nq,1:Op%Basis%tab_basis(inq)%nq)=>Op%Basis%tab_basis(inq)%d1gg
-  
+
   DO i3=1,ubound(Psi_ggg,dim=3)
   DO i1=1,ubound(Psi_ggg,dim=1)
     OpPsi_ggg(i1,:,i3) = matmul(d1gg,  matmul(d1gg,Psi_ggg(i1,:,i3)))
@@ -608,6 +607,11 @@ CONTAINS
   END DO
 	!3) action de f2^ij(Q) :  kpsi = f2^ij(Q) * k2_psi
   OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)*KEO2Psi_g(:)
+
+  Deallocate(KEO1psi_g)
+  Deallocate(KEO2psi_g)
+  Deallocate(KEO21psi_g)
+
   IF (debug) THEN
 	  Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
 	  Write(out_unitp,*) 'END KEOiiPsi_grid'
@@ -640,19 +644,27 @@ CONTAINS
    Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
    flush(out_unitp)
   END IF
+
   Allocate(KEO2psi_g(Op%Basis%nq))
+
   Iq1 = Product(Op%Basis%tab_basis(1:inq-1)%nq)
   Iq2 = Op%Basis%tab_basis(inq)%nq
   Iq3 = Product(Op%Basis%tab_basis(size(Op%Basis%tab_basis):inq+1:-1)%nq)
   OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO2Psi_g
   Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
+
   d2gg(1:Op%Basis%tab_basis(inq)%nq,1:Op%Basis%tab_basis(inq)%nq)=>Op%Basis%tab_basis(inq)%d2gg
+
   DO i3=1,ubound(Psi_ggg,dim=3)
   DO i1=1,ubound(Psi_ggg,dim=1)
     OpPsi_ggg(i1,:,i3) =   matmul(d2gg,Psi_ggg(i1,:,i3))
   END DO
   END DO
+
   OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)*KEO2Psi_g(:)
+
+  Deallocate(KEO2psi_g)
+
   IF (debug) THEN
    Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
    Write(out_unitp,*) 'END KEOiiPsi_grid'
@@ -674,17 +686,22 @@ CONTAINS
   Logical,         parameter          :: debug = .false.
   Integer                             :: iq,i1,i3,inq1,inq2
   Integer                             :: Iq1,Iq2,Iq3,iterm
+
   IF (debug) THEN
    Write(out_unitp,*) 'BEGINNING OpPsi_gridcnD'
    Call Write_op(op)
    Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
    flush(out_unitp)
   END IF
+
   !OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
-  OpPsi_g = 0._Rk
+
+  OpPsi_g = ZERO
   DO iterm=1,size(Op%Grid)
+
    inq1 = Op%Grid(iterm)%DerivIndex(1)
    inq2 = Op%Grid(iterm)%DerivIndex(2)
+
    IF (inq1 > 0 .and. inq2 > 0 .and. inq1 /= inq2) THEN ! terme croisé
     Call KEOijPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1,inq2)
    ELSE IF (inq1 > 0 .and. inq2 > 0 .and. inq1 == inq2) THEN ! terme non croisé
@@ -692,14 +709,17 @@ CONTAINS
    ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
     Call KEOiPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1) ! dérivé premiere
    ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
-    Call KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)
+    Call KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)     ! les scalaires
    END IF
+
   END DO
+
   IF (debug) THEN
    Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
    Write(out_unitp,*) 'END OpPsi_gridcnD'
    flush(out_unitp)
   END IF
+
  END SUBROUTINE OpPsi_gridcnD
 
 
@@ -717,13 +737,16 @@ CONTAINS
   Logical,         parameter          :: debug = .false.
   Integer                             :: iq,i1,i3,inb
   Integer                             :: Iq1,Iq2,Iq3
+
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING OpPsi_gridnD'
     Call Write_op(op)
     Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
     flush(out_unitp)
   END IF
+
   OpPsi_g(:) = Op%Scalar_g(:)*Psi_g(:)
+
   DO inb = 1,size(Op%Basis%tab_basis)
     Iq1 = Product(Op%Basis%tab_basis(1:inb-1)%nq)
     Iq2 = Op%Basis%tab_basis(inb)%nq
@@ -737,11 +760,13 @@ CONTAINS
     END DO
     END DO
   END DO
+
   IF (debug) THEN
     Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
     Write(out_unitp,*) 'END OpPsi_gridnD'
     flush(out_unitp)
   END IF
+
  END SUBROUTINE OpPsi_gridnD
 
  SUBROUTINE OpPsi_grid(OpPsi_g,Psi_g,Op)

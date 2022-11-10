@@ -126,6 +126,7 @@ module Molec_m
       Call sub_Init_Qmodel(ndimQ,nsurf,pot_name,adiabatic,option)
 
       Molec%ndim  =  ndimQ
+
       Allocate(Mat_V(nsurf,nsurf))
       Allocate(H(nsurf,nsurf,ndimQ,ndimQ))
       Allocate(G(nsurf,nsurf,ndimQ))
@@ -195,10 +196,20 @@ module Molec_m
       flush(out_unitp)
     END IF
 
+    Deallocate(Mat_V)
+    Deallocate(H)
+    Deallocate(G)
+    Deallocate(F2)
+    Deallocate(F1)
+    Deallocate(Q0)
+    Deallocate(m)
+    Deallocate(QML0)
+    Deallocate(ScaleQ)
+
  END SUBROUTINE Read_Molec
 
  SUBROUTINE Calc_potsub(Calc_pot,Q,Molec)
-  USE UtilLib_m
+ USE UtilLib_m
     Real(kind=Rk), intent(in)     :: Q(:)
     TYPE(Molec_t), intent(in)     :: Molec
     Real(kind=Rk), intent(inout)  :: Calc_pot
@@ -248,7 +259,8 @@ module Molec_m
       !Calc_pot = De*dot_product((1-exp(-alpha1*(Q-Re))),(1-exp(-alpha1*(Q-Re))))
       !Calc_pot = De*(1-exp(-alpha1*(Q(1)-Re)))**2
     END SELECT
-
+    Deallocate(Mat_V)
+    Deallocate(QQML)
     IF (debug) THEN
       write(out_unitp,*)
       write(out_unitp,*) Calc_pot
@@ -292,6 +304,8 @@ module Molec_m
     !Calc_pot = De*dot_product((1-exp(-alpha1*(Q-Re))),(1-exp(-alpha1*(Q-Re))))
    ! Calc_pot = De*(1-exp(-alpha1*(Q(1)-Re)))**2
    END IF
+   Deallocate(Mat_V)
+   Deallocate(QQML)
   END FUNCTION Calc_pot
 
-end module Molec_m
+End module Molec_m

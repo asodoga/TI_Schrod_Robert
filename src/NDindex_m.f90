@@ -55,8 +55,8 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-    NDindex%Ndim = Ndim
-    NDindex%NDend = NDend
+    NDindex%Ndim      = Ndim
+    NDindex%NDend     = NDend
     Allocate(NDindex%Tab0(NDindex%Ndim))
     NDindex%Tab0(:)   = 1
     NDindex%Tab0(1)   = 0
@@ -65,7 +65,7 @@ CONTAINS
       write(out_unitp,*) NDindex%Ndim
       write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
       write(out_unitp,*)'NDindex%Tab0', NDindex%Tab0(:)
-      write(out_unitp,*) 'END Init_NDindex'
+      write(out_unitp,*)'END Init_NDindex'
       flush(out_unitp)
     END IF
 

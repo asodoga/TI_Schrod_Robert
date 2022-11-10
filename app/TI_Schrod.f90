@@ -61,9 +61,11 @@ PROGRAM TI_Schrod
   !The action of the Hamiltonian operator on the wave packet and
   !the construction of the Hamiltonian matrix
   CALL Make_Mat_OP(Op)
+
   !====================================================================================
   !The diagonalization of the Hamiltonian matrix
   CALL Diago_Op(Op)
+  
   !====================================================================================
   !Deallocating arrays allocated during the program
   write(out_unitp,*) 'deallocation'
