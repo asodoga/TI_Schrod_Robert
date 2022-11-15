@@ -5,6 +5,6 @@
    /
 
    &basis_nD name='Dp' nb_basis=3   /
-   &basis_nD name='herm'   nb=2 nq=3 SCALEQ=4.73  Q0=2.46  /
-   &basis_nD name='herm'   nb=2 nq=3 SCALEQ=4.73  Q0=2.46   /
-   &basis_nD name='herm'   nb=2 nq=3 SCALEQ=5.88  Q0=1.65/
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=4.73  Q0=2.46  /
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=4.73  Q0=2.46   /
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=5.88  Q0=1.65/

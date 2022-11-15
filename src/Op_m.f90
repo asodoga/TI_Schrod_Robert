@@ -159,9 +159,14 @@ CONTAINS
     Call Write_basis(Op%Basis)
     flush(out_unitp)
   END IF
+
   Allocate(Q(size(Op%Basis%tab_basis)))
   Allocate(F1(size(Op%Basis%tab_basis)))
   Allocate(F2(size(Op%Basis%tab_basis),size(Op%Basis%tab_basis)))
+
+  Call Nterm_calc_H(Op%Basis%NDindexq)
+
+  Op%Basis%NDindexq%Nterm = Nterm
 
   Allocate(Op%Grid(Nterm))
 
@@ -292,7 +297,7 @@ CONTAINS
   Write(out_unitp,*)
   Write(out_unitp,*) 'eigenvalues = '
   Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
-  DO ib=1,8!Op%Basis%nb
+  DO ib=1,20!Op%Basis%nb
     DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
     Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
   END DO
@@ -705,7 +710,7 @@ CONTAINS
    IF (inq1 > 0 .and. inq2 > 0 .and. inq1 /= inq2) THEN ! terme croisé
     Call KEOijPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1,inq2)
    ELSE IF (inq1 > 0 .and. inq2 > 0 .and. inq1 == inq2) THEN ! terme non croisé
-    Call KEOiiPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1)
+    Call KEOii1Psi_grid(OpPsi_g,Psi_g,Op,iterm,inq1)
    ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
     Call KEOiPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1) ! dérivé premiere
    ELSE IF (inq1 == 0 .and. inq2 == 0) THEN

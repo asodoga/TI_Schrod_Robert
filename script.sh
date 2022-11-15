@@ -28,13 +28,14 @@ fpm build --flag   "-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer 
 #gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schrod.a $QMLDIR/libpot.a $ADDIR/libAD_dnSVM.a -lblas -llapack
 
 gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schrod.a $QMLDIR/libpot.a $ADDIR/libAD_dnSVM.a $ARPACKDIR/libarpack_Linux.a $EVRTDIR/libTnum.a -lblas -llapack
-#./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clh2p > arpacka
+#./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clHDp > arpDH
+
 #./TI_Schrod.x < DAT_files/Dat_test_QML_ClH2+_Botschwina2 > 10nQML_ClH2+_Botschwina2
 
 #./TI_Schrod.x < Resultats_ClH2p/Dat_test_QML_ClH2+_Botschwina > ClD2+_Botschwina1
 
-./TI_Schrod.x < DAT_files/Dat_test_QML_op6 > RO_test2_3
+./TI_Schrod.x < DAT_files/Dat_test_QML_op6 > RO_test12_12_20
 #./TI_Schrod.x < Resultats_ClDDp/Dat_test_QML_ClH2+_Botschwina > ClD2+_Botschwina1
 
-#./TI_Schrod.x < Resultats_ClHDp/Dat_test_QML_op6 > restClHDp_QML_op6
+#./TI_Schrod.x < Resultats_ClDDp/Dat_test_QML_op6 > restClHDD_QML_op6_corect_9
 #./TI_Schrod.x < Resultats_ClHDp/Dat_test_QML_ClH2+_Botschwina > ClD2+_Botschwina1

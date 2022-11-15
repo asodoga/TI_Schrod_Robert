@@ -32,16 +32,51 @@ MODULE NDindex_m
 
   TYPE :: NDindex_t
     integer                       :: Ndim            = 0
+    integer                       :: Nterm           = 0
     integer,  allocatable         :: Tab0(:)      ! = [0,1]
     integer, allocatable          :: NDsize(:)
     integer, allocatable          :: NDend(:)
   END TYPE NDindex_t
 
   PRIVATE
-  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t,Init_NDindex!,alloc_Tab
+  PUBLIC :: increase_NDindex,Init_tab_ind,Testindex,NDindex_t,Init_NDindex,Nterm_calc_H
 
 CONTAINS
 
+  SUBROUTINE Nterm_calc_H(NDindex)
+    TYPE(NDindex_t),intent(inout)  :: NDindex
+    !integer, intent(out)           :: 
+    !logical,    parameter         :: debug = .true.
+    logical,     parameter         :: debug = .false.
+    integer                        :: iterm,f,f2
+    IF (debug) THEN
+      write(out_unitp,*) 'Nterm_calc'
+      flush(out_unitp)
+    END IF
+
+    f=1
+    DO iterm = NDindex%Ndim,1-1
+     f=f*iterm
+    END DO
+
+    f2=1
+    DO iterm = NDindex%Ndim-2,1-1
+      IF(iterm<=0) THEN
+       f2 = 1
+      ELSE
+       f2 = f2*iterm
+      END IF
+    END DO
+
+    NDindex%Nterm = 2 * NDindex%Ndim + 1 + (f /(2*f2))
+
+    IF (debug) THEN
+      write(out_unitp,*) NDindex%Nterm
+      write(out_unitp,*)'Nterm_calc'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE Nterm_calc_H
 
   SUBROUTINE Init_NDindex(NDindex,NDend,Ndim)
     TYPE(NDindex_t),intent(inout) :: NDindex
