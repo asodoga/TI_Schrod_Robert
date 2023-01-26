@@ -215,8 +215,11 @@ module Molec_m
     Real(kind=Rk), intent(inout)  :: Calc_pot
     Real(kind=Rk), allocatable    :: QQML(:)
     Real(kind=Rk), allocatable    :: Mat_V(:,:)
+    Real(kind=Rk)                 :: A,B,Tmin,Tmax
     !Logical,       parameter     :: debug = .true.
     Logical,       parameter      :: debug = .false.
+    Logical,       parameter      :: Pot_calc = .false.
+    integer                       :: iq1,iq2,I
 
 
     IF (debug) THEN
@@ -259,6 +262,39 @@ module Molec_m
       !Calc_pot = De*dot_product((1-exp(-alpha1*(Q-Re))),(1-exp(-alpha1*(Q-Re))))
       !Calc_pot = De*(1-exp(-alpha1*(Q(1)-Re)))**2
     END SELECT
+!!!!!!!Calcul du potentiel!!!!
+  IF (Pot_calc) THEN
+    Open(1,file='Pot_r1_r2v.dat',status='replace')
+    !I=0
+    DO iq2 = 0,150
+    DO iq1 = 0,150
+
+     QQML(1)=   1.9_Rk+iq1*0.01_Rk
+      QQML(2)=   1.9_Rk+iq2*0.01_Rk !2.46_Rk !+ iq*0.2_Rk
+      QQML(3)=   1.64_rk !+ iq*0.5_Rk
+      Call sub_Qmodel_V(Mat_V,QQML)
+      Write(1,*) QQML,(Mat_V+460.59052688079885_Rk)*219474.631443_RK
+    END DO
+    Write(1,*)
+    END DO
+    Close(1)
+
+    Open(2,file='Pot_r1_Theta.dat',status='replace')
+    !I=0
+    DO iq2 = 0,100
+    DO iq1 = 0,150
+
+      QQML(1) =   1.9_Rk+iq1*0.01_Rk
+      QQML(2) =   2.46_Rk
+      QQML(3) =   One + iq2*0.02_Rk
+      Call sub_Qmodel_V(Mat_V,QQML)
+      Write(2,*) QQML,(Mat_V+460.59052688079885_Rk)*219474.631443_RK
+    END DO
+    Write(2,*)
+    END DO
+    Close(2)
+  END IF
+
     Deallocate(Mat_V)
     Deallocate(QQML)
     IF (debug) THEN

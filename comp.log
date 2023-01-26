@@ -1,0 +1,52 @@
+************ obj/files: obj/NumParameters_m.o obj/UtilLib_m.o obj/diago_m.o obj/Molec_m.o obj/NDindex_m.o obj/Basis_m.o obj/psi_m.o obj/Op_m.o obj/Tana_m.o
+gfortran -O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp -o obj/NumParameters_m.o -c src/NumParameters_m.f90
+gfortran -O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp -o obj/UtilLib_m.o -c src/UtilLib_m.f90
+src/UtilLib_m.f90:213:0:
+
+  213 |        wformat = strdup( '(" ' // trim(name_info) // ': ",' )
+      | 
+Warning: ‘.wformat’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+gfortran -O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp -o obj/diago_m.o -c src/diago_m.f90
+src/diago_m.f90:849:32:
+
+  849 |   120    SCALE=SCALE+ABS(Z(I,K))
+      |                                1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 120 at (1)
+src/diago_m.f90:870:26:
+
+  870 |   180    G=G+Z(J,K)*Z(I,K)
+      |                          1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 180 at (1)
+src/diago_m.f90:874:26:
+
+  874 |   200    G=G+Z(K,J)*Z(I,K)
+      |                          1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 200 at (1)
+src/diago_m.f90:885:21:
+
+  885 |          DO 260 K=1,J
+      |                     1
+Warning: Fortran 2018 deleted feature: Shared DO termination label 260 at (1)
+src/diago_m.f90:889:28:
+
+  889 |   280    Z(I,K)=SCALE*Z(I,K)
+      |                            1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 280 at (1)
+src/diago_m.f90:901:23:
+
+  901 |   340 G=G+Z(I,K)*Z(K,J)
+      |                       1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 340 at (1)
+src/diago_m.f90:902:18:
+
+  902 |       DO 360 K=1,L
+      |                  1
+Warning: Fortran 2018 deleted feature: Shared DO termination label 360 at (1)
+gfortran -O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp -o obj/Molec_m.o -c src/Molec_m.f90
+src/Molec_m.f90:31:6:
+
+   31 |   USE Tana_m
+      |      1
+Fatal Error: Cannot open module file ‘tana_m.mod’ for reading at (1): Aucun fichier ou dossier de ce type
+compilation terminated.
+make: *** [Makefile:49 : obj/Molec_m.o] Erreur 1

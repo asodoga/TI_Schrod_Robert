@@ -45,34 +45,24 @@ CONTAINS
 
   SUBROUTINE Nterm_calc_H(NDindex)
     TYPE(NDindex_t),intent(inout)  :: NDindex
-    !integer, intent(out)           :: 
-    !logical,    parameter         :: debug = .true.
-    logical,     parameter         :: debug = .false.
-    integer                        :: iterm,f,f2
+    !integer, intent(out)           ::
+    logical,    parameter         :: debug = .true.
+    !logical,     parameter         :: debug = .false.
+
     IF (debug) THEN
-      write(out_unitp,*) 'Nterm_calc'
+      write(out_unitp,*) 'BEGINNING Nterm_calc'
       flush(out_unitp)
     END IF
 
-    f=1
-    DO iterm = NDindex%Ndim,1-1
-     f=f*iterm
-    END DO
 
-    f2=1
-    DO iterm = NDindex%Ndim-2,1-1
-      IF(iterm<=0) THEN
-       f2 = 1
-      ELSE
-       f2 = f2*iterm
-      END IF
-    END DO
 
-    NDindex%Nterm = 2 * NDindex%Ndim + 1 + (f /(2*f2))
+
+
+    NDindex%Nterm =  (NDindex%Ndim + 2)*(NDindex%Ndim + 1)/2
 
     IF (debug) THEN
       write(out_unitp,*) NDindex%Nterm
-      write(out_unitp,*)'Nterm_calc'
+      write(out_unitp,*)'End Nterm_calc'
       flush(out_unitp)
     END IF
 

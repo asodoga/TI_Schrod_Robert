@@ -153,7 +153,8 @@ CONTAINS
   Logical                             :: Endloop_q
   Logical                             :: Endloop_b
   Integer, allocatable                :: tab_iq(:)
-  Integer                             :: ib,iq,inb,iterm,Nterm=10
+  Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm
+  Integer                             :: inq1,inq2
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING Set_grid_Op'
     Call Write_basis(Op%Basis)
@@ -163,30 +164,32 @@ CONTAINS
   Allocate(Q(size(Op%Basis%tab_basis)))
   Allocate(F1(size(Op%Basis%tab_basis)))
   Allocate(F2(size(Op%Basis%tab_basis),size(Op%Basis%tab_basis)))
-
-  Call Nterm_calc_H(Op%Basis%NDindexq)
-
-  Op%Basis%NDindexq%Nterm = Nterm
-
+  Nterm =  (Op%Basis%NDindexq%Ndim + 2)*(Op%Basis%NDindexq%Ndim + 1)/2
   Allocate(Op%Grid(Nterm))
 
-  Do iterm=1,size(Op%Grid)
+  DO iterm=1,size(Op%Grid)
   Allocate(Op%Grid(iterm)%Vec(Op%Basis%nq))
   END DO
-
-  Op%Grid(1)%DerivIndex(:)  = [0,0]
-  Op%Grid(2)%DerivIndex(:)  = [1,1]
-  Op%Grid(3)%DerivIndex(:)  = [1,2]
-  Op%Grid(4)%DerivIndex(:)  = [1,3]
-  Op%Grid(5)%DerivIndex(:)  = [2,2]
-  Op%Grid(6)%DerivIndex(:)  = [2,3]
-  Op%Grid(7)%DerivIndex(:)  = [3,3]
-  Op%Grid(8)%DerivIndex(:)  = [1,0]
-  Op%Grid(9)%DerivIndex(:)  = [2,0]
-  Op%Grid(10)%DerivIndex(:) = [3,0]
+  iterm = 1
 
 
-  Open(1,file='Pot_r.dat',status='replace')
+  Op%Grid(iterm)%DerivIndex(:)  = [0,0]
+  DO i2 = 1,size(Op%Basis%tab_basis)
+  DO i1 = i2,size(Op%Basis%tab_basis)
+
+    iterm = iterm + 1
+    Op%Grid(iterm)%DerivIndex(:)  = [i2,i1]
+
+  END DO
+  END DO
+  !Op%Grid(4)%DerivIndex(:)  = [2,3]
+
+  DO i1=1,size(Op%Basis%tab_basis)
+    iterm=iterm+1
+    Op%Grid(iterm)%DerivIndex(:)  = [i1,0]
+    Write(out_unitp,*)iterm,Op%Grid(iterm)%DerivIndex(:)
+  END DO
+
 
   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
 
@@ -199,24 +202,23 @@ CONTAINS
    Do inb = 1,size(Op%Basis%tab_basis)
      Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb))
    END DO
+
    Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
    Call Calc_potsub(V,Q,Op%Molec)
 
-   !Write(1,*) Q,V
+     DO iterm=1,size(Op%Grid)
+       inq1 = Op%Grid(iterm)%DerivIndex(1)
+       inq2 = Op%Grid(iterm)%DerivIndex(2)
 
-   Op%Grid(1)%Vec(Iq)  =   V+Vep
-   Op%Grid(2)%Vec(Iq)  =   F2(1,1)
-   Op%Grid(3)%Vec(Iq)  =   F2(1,2)
-   Op%Grid(4)%Vec(Iq)  =   F2(1,3)
-   Op%Grid(5)%Vec(Iq)  =   F2(2,2)
-   Op%Grid(6)%Vec(Iq)  =   F2(2,3)
-   Op%Grid(7)%Vec(Iq)  =   F2(3,3)
-   Op%Grid(8)%Vec(Iq)  =   F1(1)
-   Op%Grid(9)%Vec(Iq)  =   F1(2)
-   Op%Grid(10)%Vec(Iq) =   F1(3)
-
+       IF (inq1 > 0 .and. inq2 > 0 )THEN
+         Op%Grid(iterm)%Vec(Iq)  =  F2(inq1,inq2)
+       ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
+         Op%Grid(iterm)%Vec(Iq)  =  F1(inq1)
+       ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
+       Op%Grid(iterm)%Vec(Iq)     =   V+Vep
+       END IF
+     END DO
   END DO
-  Close(1)
 
   Deallocate(Tab_iq)
 
@@ -252,9 +254,15 @@ CONTAINS
   DO ib = 1,Op%Basis%nb
     Psi_b(:)  = ZERO
     Psi_b(ib) = ONE
-    Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
+
+    !Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
+    Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
+    !Call BasisTOGrid_Basis_rapide(Psi_g,Psi_b,Op%Basis)
     Call OpPsi_grid(OpPsi_g,Psi_g,Op)
-    Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+
+    !Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    CALL GridTOBasis_Basis_rapide(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    !CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
   END DO
 
   Deallocate(Psi_b)
@@ -267,6 +275,48 @@ CONTAINS
   END IF
  END SUBROUTINE Make_Mat_OP
 
+ SUBROUTINE Make_Mat_OP1(Op)
+ USE Molec_m
+ USE Basis_m
+  TYPE (Op_t),     intent(inout)      :: Op
+  !Logical,          parameter         :: debug = .true.
+  Logical,         parameter          :: debug = .false.
+  Integer                             :: ib,iq,jb,ib1,ib2
+  Real (kind=Rk), allocatable         :: Psi_g(:)
+  Real (kind=Rk), allocatable         :: Psi_b(:)
+  Real (kind=Rk), allocatable         :: OpPsi_g(:)
+
+  IF (debug) THEN
+    Write(out_unitp,*) 'BEGINNING Make_Mat_OP'
+    Call Write_Op(Op)
+    Call Write_basis(Op%Basis)
+    flush(out_unitp)
+  END IF
+
+  Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
+  Allocate(Psi_b(Op%Basis%nb))
+  Allocate(Psi_g(Op%Basis%nq))
+  Allocate(OpPsi_g(Op%Basis%nq))
+
+  DO ib = 1,Op%Basis%nb
+    Psi_b(:)  = ZERO
+    Psi_b(ib) = ONE
+
+    Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
+    Call OpPsi_grid(OpPsi_g,Psi_g,Op)
+    Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+
+  END DO
+
+  Deallocate(Psi_b)
+  Deallocate(Psi_g)
+  Deallocate(OpPsi_g)
+
+  IF (debug) THEN
+    Write(out_unitp,*) 'END Make_Mat_OP'
+    flush(out_unitp)
+  END IF
+END SUBROUTINE Make_Mat_OP1
  SUBROUTINE Diago_Op(Op)
  USE Molec_m
  USE Basis_m
