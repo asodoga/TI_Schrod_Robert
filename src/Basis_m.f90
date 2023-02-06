@@ -865,10 +865,7 @@ CONTAINS
 
       BBB(1:iq1(1),1:ib2(1),1:ib3(1)) => B
       GBB(1:iq1(1),1:iq2(1),1:ib3(1)) => GBB1
-      !write(out_unitp,*) 'OK0'
-      !write(out_unitp,*)ib1(1), ib2(1),ib3(1)
 
-      !write(out_unitp,*)iq1(1), iq2(1),iq3(1)
       Call BasisTOGrid_1D(GBB,BBB,Basis%tab_basis(1))
 
       DO inb = 2,Ndim-1
@@ -881,12 +878,7 @@ CONTAINS
 
         Call BasisTOGrid_1D(GBB,BBB,Basis%tab_basis(inb))
 
-         GBB1=GGB2
-        !Deallocate(GBB1)
-
-        !Allocate(GBB1(iq1(inb)*iq2(inb)*ib3(inb)))
-
-        !Call Vect_change(GBB1,GGB2)
+        GBB1=GGB2
 
         Deallocate(GGB2)
 
@@ -1131,30 +1123,37 @@ CONTAINS
 
       Ndim = size(Basis%tab_basis)
       Call Calc_indice( Ib1,Ib2,Ib3,Iq1,Iq2,Iq3,Ndim,Basis)
-      Allocate(BGG1(Iq1(1)*Iq2(1)*Iq3(1)))
-      BGG1(:) = ZERO
-      GGG( 1:Iq1(1),1:Iq2(1),1:Iq3(1))   => BGG1
-      GGB(1:Iq1(1),1:Iq2(1),1:Ib3(1))    => G
+      Allocate(BGG1(Ib1(1)*Ib2(1)*Iq3(1)))
 
-      Call GridTOBasis_1D(GGG,GGB,Basis%tab_basis(1))
+      BGG1=ZERO
+
+      GGG(1:Ib1(1),1:Iq2(1),1:Iq3(1))   => G
+      GGB(1:Ib1(1),1:Ib2(1),1:Iq3(1))    => BGG1
+
+      Call GridTOBasis_1D(GGB,GGG,Basis%tab_basis(1))
 
       DO inb = 2,Ndim-1
+
         Allocate(BGG2(Ib1(inb)*Ib2(inb)*Iq3(inb)))
-        BGG2(:) = ZERO
-        GGG( 1:Iq1(inb),1:Iq2(inb),1:Ib3(inb))    => BGG2
-        GGB( 1:Iq1(inb),1:Iq2(inb),1:Ib3(inb))    => BGG1
-        Call GridTOBasis_1D(GGG,GGB,Basis%tab_basis(inb))
-        Deallocate(BGG1)
-        Allocate(BGG1(Ib1(inb)*Ib2(inb)*Iq3(inb)))
-        Call Vect_change(BGG2,BGG1)
-        Deallocate(BGG2)
+        
+        BGG2=ZERO
+
+        GGG( 1:Ib1(inb),1:Iq2(inb),1:Iq3(inb))    => BGG1
+        GGB( 1:Ib1(inb),1:Ib2(inb),1:Iq3(inb))    => BGG2
+
+        Call GridTOBasis_1D(GGB,GGG,Basis%tab_basis(inb))
+
+        BGG1=BGG2
+
+        deallocate(BGG2)
       END DO
 
       B(:) = ZERO
 
-      GGB(1:Iq1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => BGG1
-      GGG(1:Ib1(Ndim),1:Ib2(Ndim),1:Ib3(Ndim)) => B
-      Call GridTOBasis_1D(GGG,GGB,Basis%tab_basis(Ndim))
+      GGG(1:Ib1(Ndim),1:Iq2(Ndim),1:Iq3(Ndim)) => BGG1
+      GGB(1:Ib1(Ndim),1:Ib2(Ndim),1:Iq3(Ndim)) => B
+
+      Call GridTOBasis_1D(GGB,GGG,Basis%tab_basis(Ndim))
 
       Deallocate (Iq1,Iq2,Iq3,Ib1,Ib2,Ib3)
     ELSE

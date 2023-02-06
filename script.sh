@@ -31,7 +31,7 @@ gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schr
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clh2p > essrap #arp37H2_12
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clD2p > arp37D2_12_cor
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClHD > arp35HD_12_cor
-./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClD2p > essai7
+ time ./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClD2p > essai7
 
 
 #./TI_Schrod.x < DAT_files/Dat_test_QML_ClH2+_Botschwina2 > 10nQML_ClH2+_Botschwina2

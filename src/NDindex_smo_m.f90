@@ -27,7 +27,7 @@
 
 
 !===============================================================================
-MODULE NDindex_smo_m
+MODULE NDindex1_m
   USE NumParameters_m
   USE UtilLib_m
   IMPLICIT NONE
@@ -36,7 +36,7 @@ MODULE NDindex_smo_m
     Integer                       :: Ndim            = 0
     Integer                       :: L               = 0
     Integer,  allocatable         :: Tab0(:)      ! = [0,1]
-    Integer, allocatable          :: NDsize(:) ! size: ndim
+    Integer, allocatable          :: NDsize(:)    ! size: ndim
     Integer, allocatable          :: NDend(:)
     Integer, allocatable          :: NDinit(:)
   END TYPE NDindex_t
@@ -47,10 +47,11 @@ MODULE NDindex_smo_m
 CONTAINS
 
 
-  SUBROUTINE Init_NDindex(NDindex,NDend,Ndim)
+  SUBROUTINE Init_NDindex1(NDindex,NDend,Ndim,smolyak)
     TYPE(NDindex_t),intent(inout) :: NDindex
     Integer ,      intent(in)     :: NDend(:)
     Integer ,      intent(in)     :: Ndim
+    logical ,intent(inout),optional :: smolyak
     !Logical,    parameter         :: debug = .true.
     Logical,     parameter        :: debug = .false.
 
@@ -59,11 +60,21 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-    NDindex%Ndim = Ndim
+    NDindex%Ndim  = Ndim
     NDindex%NDend = NDend
     Allocate(NDindex%Tab0(NDindex%Ndim))
-    NDindex%Tab0(:)   = 1
-    NDindex%Tab0(1)   = 0
+    Allocate(NDindex%NDinit(NDindex%Ndim))
+
+    IF(present(smolyak))THEN
+      NDindex%Tab0(:)   =  0
+      NDindex%Tab0(1)   = -1
+      NDindex%NDinit(:) =  0
+    ELSE
+      NDindex%Tab0(:)   = 1
+      NDindex%Tab0(1)   = 0
+      NDindex%NDinit(:) = 1
+    END IF
+
 
     IF (debug) THEN
       Write(out_unitp,*) NDindex%Ndim
@@ -73,7 +84,7 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-  END SUBROUTINE Init_NDindex
+  END SUBROUTINE Init_NDindex1
 
   SUBROUTINE Init_tab_ind(Tab_ind,NDindex)
   USE UtilLib_m
@@ -98,7 +109,7 @@ CONTAINS
 
   END SUBROUTINE Init_tab_ind
 
-  SUBROUTINE increase_NDindex(Tab_ind,NDindex,Endloop)
+  SUBROUTINE increase_NDindex(Tab_ind,NDindex,Endloop,smolyak)
   USE UtilLib_m
     IMPLICIT NONE
 
@@ -108,6 +119,7 @@ CONTAINS
     Logical, parameter          :: debug = .false.
     Logical, intent(inout)      :: Endloop
     Integer                     :: i
+    logical ,intent(inout),optional :: smolyak
 
 
     IF (debug) THEN
@@ -118,16 +130,32 @@ CONTAINS
     END IF
 
     Tab_ind(1)=Tab_ind(1)+1
-    IF (debug)  Write(out_unitp,*)'Tab_indd', Tab_ind
-    DO i=1,NDindex%Ndim-1
-       IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
-         Tab_ind(i+1)=Tab_ind(i+1)+1
-         Tab_ind(i)=1
-       END IF
-    END DO
-    IF (debug) Write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
 
+    IF (debug)  Write(out_unitp,*)'Tab_indd', Tab_ind
+
+    IF(present(smolyak))THEN
+
+      DO i=1,NDindex%Ndim-1
+         IF(NDindex%NDinit(i) <= Tab_ind(i) > NDindex%Ndend(i)) THEN
+           IF(Sum(Tab_ind)  <= NDindex%L) THEN
+             Tab_ind(i+1)  = Tab_ind(i+1)+1
+             Tab_ind(i)    = 1
+           END IF
+         END IF
+      END DO
+    ELSE
+
+      DO i=1,NDindex%Ndim-1
+         IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
+           Tab_ind(i+1) = Tab_ind(i+1)+1
+           Tab_ind(i) = 1
+         END IF
+      END DO
+
+    END IF
+    IF (debug) Write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
     Endloop = (Tab_ind(NDindex%Ndim) == NDindex%Ndend(NDindex%Ndim)+1)
+
 
     IF (debug) THEN
       Write(out_unitp,*) 'END Tab_ind'
@@ -135,6 +163,58 @@ CONTAINS
     END IF
 
   END SUBROUTINE increase_NDindex
+
+  SUBROUTINE increase_NDindex1(Tab_ind,NDindex,Endloop,smolyak)
+  USE UtilLib_m
+    IMPLICIT NONE
+    TYPE(NDindex_t), intent(in)     :: NDindex
+    Integer, intent(inout)          :: Tab_ind(:)
+    !Logical, parameter             :: debug = .true.
+    Logical, parameter              :: debug = .false.
+    Logical, intent(inout)          :: Endloop
+    Integer                         :: i
+    logical ,intent(inout),optional :: smolyak
+
+
+    IF (debug) THEN
+      Write(out_unitp,*)'BEGINNING Tab_ind'
+      Write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
+      Write(out_unitp,*)'Tab_ind1', Tab_ind
+      flush(out_unitp)
+    END IF
+
+    Tab_ind(1)=Tab_ind(1)+1
+
+    IF (debug)  Write(out_unitp,*)'Tab_indd', Tab_ind
+
+    IF(present(smolyak))THEN
+      DO i=1,NDindex%Ndim-1
+         IF( Tab_ind(i) >= NDindex%NDinit(i) .and.Tab_ind(i) > NDindex%Ndend(i) ) THEN
+          ! IF(Sum(Tab_ind)  <= NDindex%L) THEN
+             Tab_ind(i+1)  = Tab_ind(i+1)+1
+             Tab_ind(i)    = 1
+          ! END IF
+         END IF
+      END DO
+    ELSE
+      DO i=1,NDindex%Ndim-1
+         IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
+           Tab_ind(i+1) = Tab_ind(i+1)+1
+           Tab_ind(i) = 1
+         END IF
+      END DO
+    END IF
+
+    IF (debug) Write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
+    Endloop = (Tab_ind(NDindex%Ndim) == NDindex%Ndend(NDindex%Ndim)+1)
+
+
+    IF (debug) THEN
+      Write(out_unitp,*) 'END Tab_ind'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE increase_NDindex1
 
   SUBROUTINE Write_NDindex(NDindex)
   USE UtilLib_m
@@ -198,4 +278,4 @@ CONTAINS
 
   END SUBROUTINE Testindex
 
-END MODULE NDindex_smo_m
+END MODULE NDindex1_m

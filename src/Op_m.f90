@@ -254,15 +254,13 @@ CONTAINS
   DO ib = 1,Op%Basis%nb
     Psi_b(:)  = ZERO
     Psi_b(ib) = ONE
-
     !Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
     Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
     !Call BasisTOGrid_Basis_rapide(Psi_g,Psi_b,Op%Basis)
     Call OpPsi_grid(OpPsi_g,Psi_g,Op)
-
     !Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-    CALL GridTOBasis_Basis_rapide(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-    !CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    !CALL GridTOBasis_Basis_rapide(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
   END DO
 
   Deallocate(Psi_b)
