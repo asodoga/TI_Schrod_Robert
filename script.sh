@@ -24,6 +24,7 @@ rm -r build
 #fpm build --flag  "-fopenmp"
 #echo "fpm done"
 fpm build --flag   "-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp"
+#fpm build --flag  "-O5 -g -fbacktrace -funroll-loops -ftree-vectorize -falign-loops=16 -fopenmp"
 #fpm build --flag  “-fopenmp”
 #gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schrod.a $QMLDIR/libpot.a $ADDIR/libAD_dnSVM.a -lblas -llapack
 
@@ -31,7 +32,7 @@ gfortran -fopenmp -o TI_Schrod.x  $FPMDIR/app_TI_Schrod.f90.o $FPMDIR/libTI_Schr
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clh2p > essrap #arp37H2_12
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_37clD2p > arp37D2_12_cor
 #./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClHD > arp35HD_12_cor
- time ./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClD2p > essai7
+ time ./TI_Schrod.x < DAT_files/Dat_test_QML_op6_35ClD2p > essai70
 
 
 #./TI_Schrod.x < DAT_files/Dat_test_QML_ClH2+_Botschwina2 > 10nQML_ClH2+_Botschwina2

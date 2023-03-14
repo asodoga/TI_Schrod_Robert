@@ -117,7 +117,7 @@ module Molec_m
     Read(ni,nml=pot,IOSTAT=err_io)
     SELECT CASE (Model_type)
     CASE('QML')
-      ndimQ      = 0
+      ndimQ     = 0
       nsurf     = 0
       pot_name  = 'read_model'
       adiabatic = .FALSE.

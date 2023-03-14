@@ -31,9 +31,10 @@ MODULE NDindex_m
   IMPLICIT NONE
 
   TYPE :: NDindex_t
+    Character(len=:),allocatable  :: Sys_type
     integer                       :: Ndim  = 0
     integer                       :: Nterm = 0
-    !Integer                       :: L1     = 0
+    Integer                       :: L     = 0
     integer, allocatable          :: Tab0(:)      ! = [0,1]
     integer, allocatable          :: NDsize(:)
     integer, allocatable          :: NDend(:)
@@ -66,7 +67,7 @@ CONTAINS
 
   END SUBROUTINE Nterm_calc_H
 
-  SUBROUTINE Init_NDindex(NDindex,NDend,Ndim)
+  SUBROUTINE Init_NDindex1(NDindex,NDend,Ndim)
     TYPE(NDindex_t),intent(inout) :: NDindex
     integer ,      intent(in)     :: NDend(:)
     integer ,      intent(in)     :: Ndim
@@ -92,13 +93,13 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-  END SUBROUTINE Init_NDindex
+  END SUBROUTINE Init_NDindex1
 
-  SUBROUTINE Init_NDindex1(NDindex,NDend,Ndim,smolyak)
+  SUBROUTINE Init_NDindex(NDindex,NDend,Ndim)
     TYPE(NDindex_t),intent(inout)   :: NDindex
     Integer ,      intent(in)       :: NDend(:)
     Integer ,      intent(in)       :: Ndim
-    logical ,intent(inout),optional :: smolyak
+
     !Logical,    parameter          :: debug = .true.
     Logical,     parameter          :: debug = .false.
 
@@ -111,15 +112,19 @@ CONTAINS
     NDindex%NDend = NDend
 
     Allocate(NDindex%Tab0(NDindex%Ndim))
-    Allocate(NDindex%NDinit(NDindex%Ndim))
-
-    IF(present(smolyak))THEN
-      NDindex%Tab0(:)   = -1
-      NDindex%NDinit(:) =  0
-    ELSE
-      NDindex%Tab0(:)   = 1
-      NDindex%Tab0(1)   = 0
-    END IF
+    !Allocate(NDindex%NDinit(NDindex%Ndim))
+    !Write(out_unitp,*) NDindex%Ndim
+    SELECT CASE (NDindex%Sys_type)
+    CASE ('smolyak')
+      NDindex%Tab0(:)   =  0
+      NDindex%Tab0(1)   = -1
+      !NDindex%NDinit(:) =  0
+    CASE ('dp')
+      NDindex%Tab0(:)   =  1
+      NDindex%Tab0(1)   =  0
+    CASE default
+    STOP 'ERROR in Read_Basis: no default sym_type1.'
+    END SELECT
 
     IF (debug) THEN
       Write(out_unitp,*) NDindex%Ndim
@@ -129,7 +134,7 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-  END SUBROUTINE Init_NDindex1
+  END SUBROUTINE Init_NDindex
 
   SUBROUTINE Init_tab_ind(Tab_ind,NDindex)
   USE UtilLib_m
@@ -153,8 +158,66 @@ CONTAINS
   END SUBROUTINE Init_tab_ind
 
 
-
   SUBROUTINE increase_NDindex(Tab_ind,NDindex,Endloop)
+  USE UtilLib_m
+    IMPLICIT NONE
+    TYPE(NDindex_t), intent(in)     :: NDindex
+    Integer, intent(inout)          :: Tab_ind(:)
+    !Logical, parameter             :: debug = .true.
+    Logical, parameter              :: debug = .false.
+    Logical, intent(inout)          :: Endloop
+    Integer                         :: i
+
+
+    IF (debug) THEN
+      Write(out_unitp,*)'BEGINNING Tab_ind'
+      Write(out_unitp,*)'NDindex%Ndend', NDindex%Ndend
+      Write(out_unitp,*)'Tab_ind1', Tab_ind
+      flush(out_unitp)
+    END IF
+
+
+
+    IF (debug)  Write(out_unitp,*)'Tab_ind', Tab_ind
+
+    Tab_ind(1)=Tab_ind(1)+1
+    SELECT CASE (NDindex%Sys_type)
+
+    CASE ('smolyak')
+     DO i=1,NDindex%Ndim-1
+       IF(Sum(Tab_ind)> NDindex%L .or.Tab_ind(i) > NDindex%Ndend(i) ) THEN
+       !IF(Sum(Tab_ind)> NDindex%L) THEN
+          Tab_ind(i+1)  = Tab_ind(i+1)+1
+          Tab_ind(i)    = 0
+       END IF
+     END DO
+     Endloop = (Tab_ind(NDindex%Ndim) == NDindex%Ndend(NDindex%Ndim))
+    CASE ('dp')
+     DO i=1,NDindex%Ndim-1
+       IF(Tab_ind(i) > NDindex%Ndend(i)) THEN
+          Tab_ind(i+1) = Tab_ind(i+1)+1
+          Tab_ind(i)   = 1
+       END IF
+     END DO
+     IF (debug) Write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
+     Endloop = (Tab_ind(NDindex%Ndim) == NDindex%Ndend(NDindex%Ndim)+1)
+    CASE default
+      STOP 'ERROR in Read_Basis: no default sym_type.'
+    END SELECT
+
+
+
+
+    IF (debug) THEN
+      Write(out_unitp,*) 'END Tab_ind'
+      flush(out_unitp)
+    END IF
+
+  END SUBROUTINE increase_NDindex
+
+
+
+  SUBROUTINE increase_NDindex1(Tab_ind,NDindex,Endloop)
     USE UtilLib_m
     IMPLICIT NONE
     TYPE(NDindex_t),  intent(in) :: NDindex
@@ -190,7 +253,7 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-  END SUBROUTINE increase_NDindex
+  END SUBROUTINE increase_NDindex1
 
   SUBROUTINE Write_NDindex(NDindex)
     USE UtilLib_m
@@ -235,13 +298,15 @@ CONTAINS
     Allocate(Tab_ind(NDindex%Ndim))
 
     Call Init_tab_ind(Tab_ind,NDindex)
-
+    write(out_unitp,*) 'debut'!, tab_ind(:)
     i=0
     Do
       i=i+1
+
       CALL increase_NDindex(Tab_ind,NDindex,Endloop)
-        IF (Endloop) exit
-      write(out_unitp,*) i, tab_ind(:)
+      IF (Endloop) exit
+       write(out_unitp,*)  tab_ind(:)
+
     END DO
 
     IF (debug) THEN

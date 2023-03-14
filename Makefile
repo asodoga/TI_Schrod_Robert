@@ -1,7 +1,8 @@
 FC=gfortran
-#FFLAGS=-O3 -Wall -Wextra -fopenmp -J$(MOD_DIR)
+#FFLAGS=-fopenmp
+#FFLAGS=-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
 FFLAGS=-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
-
+#FFLAGS=-O5 -g -fbacktrace -funroll-loops -ftree-vectorize -falign-loops=16 -fopenmp
 OBJ_DIR=obj
 MOD_DIR=obj
 SRC_DIR=src

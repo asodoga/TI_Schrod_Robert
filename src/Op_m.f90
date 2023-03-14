@@ -50,8 +50,8 @@ MODULE Op_m
     Real (kind=Rk),   allocatable :: RMat(:,:) ! The matrix of the Hamiltonian operator
   END TYPE Op_t
 
-  Public :: Op_t,Write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op,Make_Mat_Op
-  Public :: OpPsi_gridnD,Grid_t
+  Public :: Op_t,Write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op,Make_Mat_Op2
+  Public :: OpPsi_gridnD,Grid_t,Make_Mat_OP_gen
 
 CONTAINS
 
@@ -114,6 +114,14 @@ CONTAINS
 !----------------------end --------------------------------------------
   Op%Basis => Basis  !Initialization of Op%Basis by the values ​​of Basis
   Op%Molec => Molec
+!!!!!!!!!!!!!!!!! test ndindex !!!!!!!!!!!!!!!!!!!!!!!!!
+
+!  Call Testindex(Op%Basis%NDindexl)
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !stop 'Robert'
+
 
   IF (Simple) THEN
     Allocate(Op%Grid(3))
@@ -194,28 +202,30 @@ CONTAINS
   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
 
   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+  !  Write(out_unitp,*) "Q", size(Tab_iq)
   Iq=0
   DO
    Iq=Iq+1
    Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
    IF (Endloop_q) exit
-   Do inb = 1,size(Op%Basis%tab_basis)
+
+   DO inb = 1,size(Op%Basis%tab_basis)
      Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb))
    END DO
 
    Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
    Call Calc_potsub(V,Q,Op%Molec)
 
-     DO iterm=1,size(Op%Grid)
-       inq1 = Op%Grid(iterm)%DerivIndex(1)
-       inq2 = Op%Grid(iterm)%DerivIndex(2)
+     DO iterm = 1,size(Op%Grid)
+       inq1  = Op%Grid(iterm)%DerivIndex(1)
+       inq2  = Op%Grid(iterm)%DerivIndex(2)
 
        IF (inq1 > 0 .and. inq2 > 0 )THEN
          Op%Grid(iterm)%Vec(Iq)  =  F2(inq1,inq2)
        ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
          Op%Grid(iterm)%Vec(Iq)  =  F1(inq1)
        ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
-       Op%Grid(iterm)%Vec(Iq)     =   V+Vep
+         Op%Grid(iterm)%Vec(Iq)     =   V+Vep
        END IF
      END DO
   END DO
@@ -228,7 +238,67 @@ CONTAINS
   END IF
  END SUBROUTINE Set_grid_op
 
- SUBROUTINE Make_Mat_OP(Op)
+ SUBROUTINE Make_Mat_OP_gen(Op)
+ USE Molec_m
+ USE Basis_m
+  TYPE (Op_t),     intent(inout)      :: Op
+  !Logical,          parameter         :: debug = .true.
+  Logical,         parameter          :: debug = .false.
+  Integer                             :: ib,iq,jb,ib1,ib2,I
+  Real (kind=Rk), allocatable         :: Psi_g(:)
+  Real (kind=Rk), allocatable         :: Psi_b(:)
+  Real (kind=Rk), allocatable         :: OpPsi_g(:)
+
+  IF (debug) THEN
+    Write(out_unitp,*) 'BEGINNING Make_Mat_OP'
+    Call Write_Op(Op)
+    Call Write_basis(Op%Basis)
+    flush(out_unitp)
+  END IF
+  SELECT CASE (Op%Basis%Basis_name)
+  CASE ('dp')
+  Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
+  Allocate(Psi_b(Op%Basis%nb))
+  Allocate(Psi_g(Op%Basis%nq))
+  Allocate(OpPsi_g(Op%Basis%nq))
+
+  DO ib = 1,Op%Basis%nb
+    Psi_b(:)  = ZERO
+    Psi_b(ib) = ONE
+    Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
+    Call OpPsi_grid(OpPsi_g,Psi_g,Op)
+    CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+  END DO
+
+  Deallocate(Psi_b)
+  Deallocate(Psi_g)
+  Deallocate(OpPsi_g)
+  CASE ('smolyak')
+
+    DO I=1,Op%Basis%Smolyak%Maxtermsmol
+     Allocate(Psi_b(Op%Basis%Smolyak%Nblp(I)))
+     Allocate(Op%Basis%Smolyak%Smol_G_l(Op%Basis%Smolyak%Nqlp(I),I))
+
+      DO ib = 1,Op%Basis%nb
+        Psi_b(:)  = ZERO
+        Psi_b(ib) = ONE
+      !  Call BasisTOGrid_Basis_rapide1(Op%Basis%Smolyak%Smol_G_l(:,I),Psi_b,Op%Basis%tab_Smolyak(I,:))
+      END DO
+  !  Write(out_unitp,*)"Basis%Smolyak%Smol_G_l(:,I)", Op%Basis%Smolyak%Smol_G_l(:,I)
+    END DO
+
+  CASE default
+    STOP 'ERROR in Read_Basis: no default basis.'
+  END SELECT
+
+
+  IF (debug) THEN
+    Write(out_unitp,*) 'END Make_Mat_OP'
+    flush(out_unitp)
+  END IF
+END SUBROUTINE Make_Mat_OP_gen
+
+ SUBROUTINE Make_Mat_OP2(Op)
  USE Molec_m
  USE Basis_m
   TYPE (Op_t),     intent(inout)      :: Op
@@ -255,12 +325,12 @@ CONTAINS
     Psi_b(:)  = ZERO
     Psi_b(ib) = ONE
     !Call BasisTOGrid_Basis(Psi_g,Psi_b,Op%Basis)
-    Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
-    !Call BasisTOGrid_Basis_rapide(Psi_g,Psi_b,Op%Basis)
+    !Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
+    Call BasisTOGrid_Basis_rapide(Psi_g,Psi_b,Op%Basis)
     Call OpPsi_grid(OpPsi_g,Psi_g,Op)
     !Call GridTOBasis_Basis(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-    !CALL GridTOBasis_Basis_rapide(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-    CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    CALL GridTOBasis_Basis_rapide(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+    !CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
   END DO
 
   Deallocate(Psi_b)
@@ -271,8 +341,7 @@ CONTAINS
     Write(out_unitp,*) 'END Make_Mat_OP'
     flush(out_unitp)
   END IF
- END SUBROUTINE Make_Mat_OP
-
+END SUBROUTINE Make_Mat_OP2
  SUBROUTINE Make_Mat_OP1(Op)
  USE Molec_m
  USE Basis_m
@@ -358,6 +427,7 @@ END SUBROUTINE Make_Mat_OP1
   Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
   Allocate(Qmoy(size(Op%Basis%tab_basis)))
   Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
 
   Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
 

@@ -33,7 +33,7 @@ PROGRAM TI_Schrod
   USE Basis_m
   USE psi_m
   USE op_m
-  USE NDindex_m
+  !USE NDindex_m
   USE Molec_m
 
   IMPLICIT NONE
@@ -51,21 +51,28 @@ PROGRAM TI_Schrod
   !====================================================================================
   ! read some informations (basis set/grid) : numbers of basis functions, grid points ...
   ! the basis/grid informations have to be put in a module
-  CALL Read_Basis(Basis,nio=in_unitp)
+  !CALL Read_Basis_old(Basis,nio=in_unitp)
 
-  !====================================================================================
+  !CALL Read_Basis_old1(Basis,nio=in_unitp)
+  Call Read_Construct_Basis(Basis,nio=in_unitp)
+  !Write(*,*) 'arrivé'
+  !STOP 'Robert'
+  !!====================================================================================
   !The transfer of previously read information to the rest of the program
   CALL Set_op(Op,Basis,Molec) ! to be change
+  !Test smolyak!!!!!
+
 
   !====================================================================================
   !The action of the Hamiltonian operator on the wave packet and
   !the construction of the Hamiltonian matrix
-  CALL Make_Mat_OP(Op)
-
+  !CALL Make_Mat_OP2(Op)
+  CALL Make_Mat_OP_gen(Op)
+  STOP 'RObert A'
   !====================================================================================
   !The diagonalization of the Hamiltonian matrix
   CALL Diago_Op(Op)
-  
+
   !====================================================================================
   !Deallocating arrays allocated during the program
   write(out_unitp,*) 'deallocation'
