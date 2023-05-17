@@ -4,8 +4,8 @@
   pot_name='ClH2+' ! potential surface name
   option=6
    /
-   
+
    &basis_nD name='Dp' nb_basis=3   /
-   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  4.7371233037873681  Q0=2.4673412574786124  /
-   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  4.7371233037873681  Q0=2.4673412574786124   /
-   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  5.4918626483228952  Q0=1.6525859462/
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  4.73  Q0=2.46  /
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  5.59  Q0=2.46   /
+   &basis_nD name='herm'   nb=12 nq=12 SCALEQ=  5.88  Q0=1.65/

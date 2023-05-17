@@ -34,20 +34,24 @@ MODULE Op_m
   USE NDindex_m
   USE Molec_m
   USE Basis_m, only : Basis_t
+  USE psi_m
 
   IMPLICIT  NONE
 
   TYPE :: Grid_t
     Real(kind=Rk),    allocatable :: Vec(:)
     Integer                       :: DerivIndex(2)
+
   END TYPE Grid_t
 
   TYPE :: Op_t
+
     TYPE (Grid_t) ,   allocatable :: Grid(:)
     TYPE (Basis_t),   pointer     :: Basis => Null()
     TYPE (Molec_t),   pointer     :: Molec => Null()
     Real (kind=Rk),   allocatable :: Scalar_g(:) ! The scalar part of the operator (The  for Hamiltonian)
     Real (kind=Rk),   allocatable :: RMat(:,:) ! The matrix of the Hamiltonian operator
+    TYPE (Op_t),      allocatable :: Grid_smol(:)
   END TYPE Op_t
 
   Public :: Op_t,Write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op,Make_Mat_Op2
@@ -162,13 +166,15 @@ CONTAINS
   Logical                             :: Endloop_b
   Integer, allocatable                :: tab_iq(:)
   Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm
-  Integer                             :: inq1,inq2
+  Integer                             :: inq1,inq2,ismol
   IF (debug) THEN
     Write(out_unitp,*) 'BEGINNING Set_grid_Op'
     Call Write_basis(Op%Basis)
     flush(out_unitp)
   END IF
 
+  SELECT CASE (Op%Basis%Basis_name)
+  CASE ('dp')
   Allocate(Q(size(Op%Basis%tab_basis)))
   Allocate(F1(size(Op%Basis%tab_basis)))
   Allocate(F2(size(Op%Basis%tab_basis),size(Op%Basis%tab_basis)))
@@ -228,23 +234,99 @@ CONTAINS
          Op%Grid(iterm)%Vec(Iq)     =   V+Vep
        END IF
      END DO
+     END DO
+
+   Deallocate(Tab_iq)
+  CASE ('smolyak')
+  Allocate(Op%Grid_smol(Op%Basis%Smolyak%Maxtermsmol))
+
+  DO Ismol=1, Op%Basis%Smolyak%Maxtermsmol
+
+    !Write(out_unitp,*) "Ismol", Ismol
+    Allocate(Q(size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)))
+    Allocate(F1(size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)))
+    Allocate(F2(size(Op%Basis%tab_Smolyak(Ismol)%tab_basis),size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)))
+    Nterm =  (Op%Basis%Smolyak%Ndim + 2)*(Op%Basis%Smolyak%Ndim + 1)/2
+    Allocate(Op%Grid_smol(Ismol)%Grid(Nterm))
+
+    DO iterm = 1,Nterm!size(Op%Grid)
+    Allocate(Op%Grid_smol(Ismol)%Grid(iterm)%Vec(Op%Basis%Smolyak%Nblp(Ismol)))
+    END DO
+    iterm = 1
+
+
+    Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(:)  = [0,0]
+    DO i2 = 1,size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)
+    DO i1 = i2,size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)
+
+      iterm = iterm + 1
+      Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(:)  = [i2,i1]
+
+    END DO
+    END DO
+    !Op%Grid(4)%DerivIndex(:)  = [2,3]
+
+    DO i1=1,size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)
+      iterm=iterm+1
+      Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(:)  = [i1,0]
+      !Write(out_unitp,*)iterm,Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(:)
+    END DO
+
+
+    Allocate(Tab_iq(size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)))
+
+    !Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+    Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq_smol(Ismol))
+    !  Write(out_unitp,*) "Q", size(Tab_iq)
+
+    Iq=0
+    DO
+     Iq=Iq+1
+     Call increase_NDindex(Tab_iq,Op%Basis%NDindexq_smol(Ismol),Endloop_q)
+     IF (Endloop_q) exit
+     !Write(out_unitp,*) "Tab_iq", Tab_iq
+     DO inb = 1,size(Op%Basis%tab_Smolyak(Ismol)%tab_basis)
+       Q(inb) =  Op%Basis%tab_Smolyak(Ismol)%tab_basis(inb)%x(tab_iq(inb))
+     END DO
+
+     Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
+     Call Calc_potsub(V,Q,Op%Molec)
+
+       DO iterm = 1,Nterm
+         inq1  = Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(1)
+         inq2  = Op%Grid_smol(Ismol)%Grid(iterm)%DerivIndex(2)
+
+         IF (inq1 > 0 .and. inq2 > 0 )THEN
+           Op%Grid_smol(Ismol)%Grid(iterm)%Vec(Iq)  =  F2(inq1,inq2)
+         ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
+           Op%Grid_smol(Ismol)%Grid(iterm)%Vec(Iq)  =  F1(inq1)
+         ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
+           Op%Grid_smol(Ismol)%Grid(iterm)%Vec(Iq)     =   V+Vep
+         END IF
+       END DO
+       END DO
+
+     Deallocate(Tab_iq)
+    Deallocate(Q,F1,F2)
   END DO
 
-  Deallocate(Tab_iq)
-
+  CASE default
+     STOP 'ERROR in Read_Basis: no default basis.'
+  END SELECT
   IF (debug) THEN
     Write(out_unitp,*) 'END Set_drid_Op'
     flush(out_unitp)
   END IF
  END SUBROUTINE Set_grid_op
 
- SUBROUTINE Make_Mat_OP_gen(Op)
+ SUBROUTINE Make_Mat_OP_gen(Op,Psi)
  USE Molec_m
  USE Basis_m
   TYPE (Op_t),     intent(inout)      :: Op
+  TYPE (Psi_t),     intent(inout)      :: Psi
   !Logical,          parameter         :: debug = .true.
   Logical,         parameter          :: debug = .false.
-  Integer                             :: ib,iq,jb,ib1,ib2,I
+  Integer                             :: ib,iq,jb,ib1,ib2,Ismol
   Real (kind=Rk), allocatable         :: Psi_g(:)
   Real (kind=Rk), allocatable         :: Psi_b(:)
   Real (kind=Rk), allocatable         :: OpPsi_g(:)
@@ -275,17 +357,34 @@ CONTAINS
   Deallocate(OpPsi_g)
   CASE ('smolyak')
 
-    DO I=1,Op%Basis%Smolyak%Maxtermsmol
-     Allocate(Psi_b(Op%Basis%Smolyak%Nblp(I)))
-     Allocate(Op%Basis%Smolyak%Smol_G_l(Op%Basis%Smolyak%Nqlp(I),I))
-
-      DO ib = 1,Op%Basis%nb
+    Allocate(Psi%Smol_G(Op%Basis%Smolyak%NSQ))
+    Allocate(Psi%Vec_smol(Op%Basis%Smolyak%Maxtermsmol))
+    DO Ismol = 1,Op%Basis%Smolyak%Maxtermsmol
+     Allocate(Psi_b(Op%Basis%Smolyak%Nblp(Ismol)))
+     Allocate(Psi%Vec_smol(Ismol)%Smol_G_l(Op%Basis%Smolyak%Nqlp(Ismol)))
+      !DO ib = 1,Op%Basis%Smolyak%Nblp(Ismol)
         Psi_b(:)  = ZERO
-        Psi_b(ib) = ONE
-      !  Call BasisTOGrid_Basis_rapide1(Op%Basis%Smolyak%Smol_G_l(:,I),Psi_b,Op%Basis%tab_Smolyak(I,:))
-      END DO
-  !  Write(out_unitp,*)"Basis%Smolyak%Smol_G_l(:,I)", Op%Basis%Smolyak%Smol_G_l(:,I)
+        Psi_b(1)  = ONE
+        Call BasisTOGrid_Basis_rapide1(Psi%Vec_smol(Ismol)%Smol_G_l,Psi_b,Op%Basis%tab_Smolyak(ismol))
+        !CALL BasisTOGrid_Basis_rapide_gen(Psi%Vec_smol(Ismol)%Smol_G_l,Psi_b,Op%Basis,Ismol)
+    !  END DO
+     Write(out_unitp,*)'Psi%Vec_smol(Ismol)%Smol_G_l',Psi%Vec_smol(Ismol)%Smol_G_l
+     Deallocate(Psi_b)
     END DO
+
+    DO Ismol = 1,Op%Basis%Smolyak%Maxtermsmol
+     IF (Ismol==1) THEN
+      Psi%Smol_G(1:Op%Basis%Smolyak%Sum_Nqlp(Ismol))&
+          = Op%Basis%Smolyak%DSmol(Ismol)*Psi%Vec_smol(Ismol)%Smol_G_l
+     ELSE
+      Psi%Smol_G(Op%Basis%Smolyak%Sum_Nqlp(Ismol-1)+1:Op%Basis%Smolyak%Sum_Nqlp(Ismol))&
+                     = Op%Basis%Smolyak%DSmol(Ismol)*Psi%Vec_smol(Ismol)%Smol_G_l
+     END IF
+    END DO
+    DO ismol=1,Op%Basis%Smolyak%NSQ
+      Write(out_unitp,*)'Op%Basis%Smolyak%Smol_G',Psi%Smol_G(ismol)
+    END DO
+    Stop 'robert est là'
 
   CASE default
     STOP 'ERROR in Read_Basis: no default basis.'

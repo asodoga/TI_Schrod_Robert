@@ -61,13 +61,13 @@ PROGRAM TI_Schrod
   !The transfer of previously read information to the rest of the program
   CALL Set_op(Op,Basis,Molec) ! to be change
   !Test smolyak!!!!!
-
+!STOP 'RObert A'
 
   !====================================================================================
   !The action of the Hamiltonian operator on the wave packet and
   !the construction of the Hamiltonian matrix
   !CALL Make_Mat_OP2(Op)
-  CALL Make_Mat_OP_gen(Op)
+  CALL Make_Mat_OP_gen(Op,psi)
   STOP 'RObert A'
   !====================================================================================
   !The diagonalization of the Hamiltonian matrix

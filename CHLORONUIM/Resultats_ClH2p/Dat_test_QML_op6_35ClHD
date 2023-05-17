@@ -1,0 +1,9 @@
+&potential
+  pot_name='ClH2+' ! potential surface name
+  option=6
+   /
+   &pot coord_type='CURV' sym_type='SYM' Model_type='QML' V0=-460.59052688000003  /
+   &basis_nD name='Dp' nb_basis=3   /
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  4.7371233037873681  Q0=2.4673412574786124  /
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  4.7371233037873681  Q0=2.4673412574786124   /
+   &basis_nD name='herm'   nb=10 nq=12 SCALEQ=  5.4918626483228952  Q0=1.6525859462/

@@ -205,16 +205,12 @@ CONTAINS
       STOP 'ERROR in Read_Basis: no default sym_type.'
     END SELECT
 
-
-
-
     IF (debug) THEN
       Write(out_unitp,*) 'END Tab_ind'
       flush(out_unitp)
     END IF
 
   END SUBROUTINE increase_NDindex
-
 
 
   SUBROUTINE increase_NDindex1(Tab_ind,NDindex,Endloop)
@@ -235,7 +231,7 @@ CONTAINS
       flush(out_unitp)
     END IF
 
-    Tab_ind(1)=Tab_ind(1)+1
+    Tab_ind(1) = Tab_ind(1)+1
     IF (debug)  write(out_unitp,*)'Tab_indd', Tab_ind
 
     DO i=1,NDindex%Ndim-1
@@ -246,7 +242,7 @@ CONTAINS
     END DO
     IF (debug) write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
 
-    Endloop =(Tab_ind(NDindex%Ndim)==NDindex%Ndend(NDindex%Ndim)+1)
+    Endloop = (Tab_ind(NDindex%Ndim)==NDindex%Ndend(NDindex%Ndim)+1)
 
     IF (debug) THEN
       write(out_unitp,*) 'END Tab_ind'

@@ -30,11 +30,18 @@ module psi_m
   implicit none
 
   private
+  TYPE :: Vec_smol_t
+    Real(kind=Rk), allocatable    :: Smol_G_l(:)
+    Real(kind=Rk), allocatable    :: Smol_B_l(:)
+  END TYPE Vec_smol_t
 
   TYPE :: psi_t
     TYPE (Basis_t),    pointer     :: Basis => Null()
     real (kind=Rk),    allocatable :: RVec(:)
     complex (kind=Rk), allocatable :: CVec(:)
+    Real(kind=Rk), allocatable     :: Smol_G(:)
+    Real(kind=Rk), allocatable     :: Smol_B(:)
+    TYPE (Vec_smol_t), allocatable :: Vec_smol(:)
   END TYPE psi_t
 
   public :: psi_t,write_psi,init_psi,dealloc_psi
@@ -42,7 +49,7 @@ module psi_m
 contains
   SUBROUTINE init_psi(psi,Basis,cplx)
   USE Basis_m
-    TYPE(psi_t),    intent(inout)      :: psi
+    TYPE (psi_t),    intent(inout)      :: psi
     TYPE (Basis_t), intent(in), target :: Basis
     logical,        intent(in)         :: cplx
 
