@@ -51,6 +51,7 @@ MODULE Basis_m
     Integer                       :: NSQ   = 0
     Integer                       :: Ndim  = 0
     Integer                       :: Maxtermsmol  = 0
+    Integer                       :: N_compt
     Integer, allocatable          :: Li_smo(:,:)
     Integer, allocatable          :: Nqli(:,:)
     Integer, allocatable          :: Nbli(:,:)
@@ -76,6 +77,8 @@ MODULE Basis_m
     Integer, allocatable         :: Ind_map(:)
     Real(kind=Rk)                :: A,B,scaleQ,Q0
     Character(len=:),allocatable :: Basis_name
+    Real(kind=Rk),   allocatable :: Vg(:)
+    Real(kind=Rk),   allocatable :: Vb(:)
     Real(kind=Rk),   allocatable :: x(:)
     Real(kind=Rk),   allocatable :: w(:)
     Real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis s d0gb(nq,nb)
@@ -311,75 +314,6 @@ CONTAINS
 
 
 
-  SUBROUTINE Mapping_2 (Basis )
-    TYPE(Basis_t),intent(inout)  :: Basis
-    !Integer, intent(in)          :: Tab_ind1(:)
-    !Integer, intent(in)          :: J
-    !Integer, intent(inout)       :: Tags2(:,:)
-    Integer                      :: I_smol,n,i,I_smol1
-    Integer, allocatable         :: Tab_ind(:)
-    Integer, allocatable         :: Tab_li(:)
-    Integer, allocatable         :: Tags2(:,:)
-    Integer, allocatable         :: Ndend(:,:)
-    logical                      :: Endloop
-
-    Allocate(Tab_li(Basis%Smolyak%Ndim))
-
-    Allocate(Ndend(Basis%Smolyak%Maxtermsmol,Basis%Smolyak%Ndim))
-    Call Init_tab_ind(Tab_li,Basis%NDindexl)
-    I_smol = 0
-    DO
-      I_smol = I_smol+1
-      CALL increase_NDindex(Tab_li,Basis%NDindexl,Endloop)
-      Allocate(Basis%tab_Smolyak(I_smol)%Tags1(Basis%Smolyak%Ndim+1))
-      DO i=1,Basis%Smolyak%Ndim
-        Basis%tab_Smolyak(I_smol)%Tags1(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
-      END DO
-      Basis%tab_Smolyak(I_smol)%Tags1(Basis%Smolyak%Ndim+1) = I_smol
-
-      Write(*,*) 'Tab',Basis%tab_Smolyak(I_smol)%Tags1
-
-      DO i=1,Basis%Smolyak%Ndim
-        Ndend(I_smol,i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
-      END DO
-
-      IF (Endloop) exit
-    END DO
-
-    Allocate(Tab_ind(Basis%Smolyak%Ndim))
-
-    DO I_smol=1,Basis%Smolyak%Maxtermsmol
-      Allocate(Tags2(Basis%tab_Smolyak(I_smol)%nb,Basis%Smolyak%Ndim+1))
-      Tab_ind(:) = 1
-      Tab_ind(1) = 0
-      Do n=1,Basis%tab_Smolyak(I_smol)%nb
-        Tab_ind(1) = Tab_ind(1)+1
-        DO i=1,Basis%Smolyak%Ndim-1
-          IF(Tab_ind(i)  > Ndend(I_smol,i)) THEN
-           Tab_ind(i+1) = Tab_ind(i+1)+1
-           Tab_ind(i)   = 1
-          END IF
-        END DO
-
-
-        DO I_smol1=1,I_smol
-           IF( ALL(Tab_ind(1:Basis%Smolyak%Ndim)==Basis%tab_Smolyak(I_smol1)%Tags1(1:Basis%Smolyak%Ndim)))THEN
-
-             Tags2(n,:)=Basis%tab_Smolyak(I_smol1)%Tags1(:)
-
-           END IF
-        END DO
-
-        Write(*,*) 'mapping',Tags2(n,:)
-
-      END DO
-      Deallocate(Tags2)
-      Write(*,*) '-------------------------------------------------------'
-    END DO
-
-  END SUBROUTINE Mapping_2
-
-
   SUBROUTINE Mapping_2G (Basis )
     Logical,             parameter      :: debug = .true.
     !Logical,             parameter       :: debug = .false.
@@ -393,6 +327,7 @@ CONTAINS
     Integer                      :: Nbinter,I_smol2,I_compt
     Integer, allocatable         :: Nbinter1(:)
     Integer, allocatable         :: Tags(:)
+    Integer, allocatable         :: Tags1(:)
     logical                      :: Endloop
 
 
@@ -411,7 +346,8 @@ CONTAINS
 
       CALL increase_NDindex(Tab_li,Basis%NDindexl,Endloop)
 
-      Allocate(Basis%tab_Smolyak(I_smol)%Tags1(Basis%Smolyak%Ndim))
+
+      Allocate(Tags1(Basis%Smolyak%Ndim))
 
       DO i=1,Basis%Smolyak%Ndim
         Ndend(I_smol,i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
@@ -430,29 +366,24 @@ CONTAINS
 
       Nbinter  = Product(Nbinter1(:))
 
-      Basis%tab_Smolyak(I_smol)%Tags1(1:Basis%Smolyak%Ndim) = Ndbeging(:)
-      Basis%tab_Smolyak(I_smol)%Tags1(1) = Ndbeging(1)-1
+      Tags1(1:Basis%Smolyak%Ndim) = Ndbeging(:)
+      Tags1(1) = Ndbeging(1)-1
 
       DO  n = 1,Nbinter
-        Basis%tab_Smolyak(I_smol)%Tags1(1) = Basis%tab_Smolyak(I_smol)%Tags1(1)+1
+        Tags1(1) = Tags1(1)+1
         DO i = 1,Basis%Smolyak%Ndim-1
-          IF(Basis%tab_Smolyak(I_smol)%Tags1(i)  >  Ndend(I_smol,i)) THEN
-           Basis%tab_Smolyak(I_smol)%Tags1(i+1) = Basis%tab_Smolyak(I_smol)%Tags1(i+1)+1
-           Basis%tab_Smolyak(I_smol)%Tags1(i)   = Ndbeging(i)
+          IF(Tags1(i)  >  Ndend(I_smol,i)) THEN
+           Tags1(i+1) = Tags1(i+1)+1
+           Tags1(i)   = Ndbeging(i)
           END IF
         END DO
         Compt=Compt+1
-
-        Write(*,*) 'Tab',Basis%tab_Smolyak(I_smol)%Tags1
       END DO
-      Deallocate(Basis%tab_Smolyak(I_smol)%Tags1)
-
+      Deallocate(Tags1)
       IF (Endloop) exit
-
     END DO
 
     Allocate(Basis%tab_in_Smolyak(Compt))
-
 
     Call Init_tab_ind(Tab_li,Basis%NDindexl)
 
@@ -500,11 +431,11 @@ CONTAINS
         Basis%tab_in_Smolyak(Compt)%Tags1 = Tags
 
       END DO
-
       Deallocate(Tags)
-
       IF (Endloop) exit
     END DO
+
+    Basis%Smolyak%N_compt = compt
 
     Allocate(Tab_ind(Basis%Smolyak%Ndim))
 
@@ -522,23 +453,70 @@ CONTAINS
           END IF
         END DO
 
-        DO I_compt = 1,Compt
-
+        DO I_compt = 1,Basis%Smolyak%N_compt
            IF( ALL(Tab_ind(1:Basis%Smolyak%Ndim) == Basis%tab_in_Smolyak(I_compt)%Tags1(1:Basis%Smolyak%Ndim)))THEN
              Tags2(n,:) = Basis%tab_in_Smolyak(I_compt)%Tags1(:)
              Basis%tab_Smolyak(I_smol)%Ind_map(n)= I_compt
              exit
            END IF
-
         END DO
-        Write(*,*) 'Ind_map',Basis%tab_Smolyak(I_smol)%Ind_map(n)
-        !Write(*,*) 'mapping',Tags2(n,:)
+
       END DO
       Deallocate(Tags2)
-      Write(*,*) '-------------------------------------------------------'
     END DO
 
   END SUBROUTINE Mapping_2G
+
+  SUBROUTINE test_smolyak(Basis)
+    USE UtilLib_m
+    TYPE(Basis_t), intent(inout)  :: Basis
+    Integer                       :: I_smol,n,i,I_smol1,I_compt
+    Real(kind=Rk), allocatable    :: Vsort(:),V_entre(:)
+
+    Allocate(V_entre(Basis%Smolyak%N_compt))
+    Allocate(Vsort(Basis%Smolyak%N_compt))
+    V_entre(:) = Three
+    V_entre(1) = One
+
+
+
+    DO I_smol = 1,Basis%Smolyak%Maxtermsmol
+
+      Allocate(Basis%tab_Smolyak(I_smol)%Vb(Basis%tab_Smolyak(I_smol)%nb))
+      Allocate(Basis%tab_Smolyak(I_smol)%Vg(Basis%tab_Smolyak(I_smol)%nq))
+      DO n = 1,Basis%tab_Smolyak(I_smol)%nb
+        I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
+        !DO  I_compt = 1,Basis%Smolyak%N_compt
+         !IF(I_compt==Basis%tab_Smolyak(I_smol)%Ind_map(n) ) THEN
+          Basis%tab_Smolyak(I_smol)%Vb(n) = V_entre(I_compt)
+         !END IF
+        !END DO
+      END DO
+      write(out_unitp,*) Basis%tab_Smolyak(I_smol)%Vb
+      Call BasisTOGrid_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vg,Basis%tab_Smolyak(I_smol)%Vb, Basis%tab_Smolyak(I_smol))
+      Call GridTOBasis_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vb,Basis%tab_Smolyak(I_smol)%Vg, Basis%tab_Smolyak(I_smol))
+      write(out_unitp,*) Basis%tab_Smolyak(I_smol)%Vb
+      write(out_unitp,*) Basis%Smolyak%DSmol(I_smol)
+      !Basis%tab_Smolyak(I_smol)%Vb = Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb
+
+    END DO
+     Vsort(:)=ZERO
+  !  DO  I_compt = 1,Basis%Smolyak%N_compt
+      DO I_smol = 1,Basis%Smolyak%Maxtermsmol
+        DO n = 1,Basis%tab_Smolyak(I_smol)%nb
+          I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
+         !IF(I_compt==Basis%tab_Smolyak(I_smol)%Ind_map(n))THEN
+           Vsort(I_compt)= Vsort(I_compt)+ Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb(n)
+         !END IF
+        END DO
+      END DO
+  !  END DO
+
+    DO  I_compt = 1,Basis%Smolyak%N_compt
+      write(out_unitp,*)   V_entre(I_compt),':',Vsort(I_compt)
+    END DO
+
+  END SUBROUTINE test_smolyak
 
   SUBROUTINE Read_Construct_Basis(Basis,nio)
    USE UtilLib_m
@@ -731,6 +709,7 @@ CONTAINS
         Basis%Smolyak%NSQ       =  Sum(Basis%Smolyak%Nqlp)
 
         Call  Mapping_2G (Basis )
+        CALL test_smolyak(Basis)
       CASE default
         STOP 'ERROR in Read_Basis: no default basis.'
       END SELECT

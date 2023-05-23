@@ -338,30 +338,30 @@ CONTAINS
     flush(out_unitp)
   END IF
   SELECT CASE (Op%Basis%Basis_name)
-  CASE ('dp')
-  Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
-  Allocate(Psi_b(Op%Basis%nb))
-  Allocate(Psi_g(Op%Basis%nq))
-  Allocate(OpPsi_g(Op%Basis%nq))
+   CASE ('dp')
+     Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
+     Allocate(Psi_b(Op%Basis%nb))
+     Allocate(Psi_g(Op%Basis%nq))
+     Allocate(OpPsi_g(Op%Basis%nq))
 
-  DO ib = 1,Op%Basis%nb
-    Psi_b(:)  = ZERO
-    Psi_b(ib) = ONE
-    Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
-    Call OpPsi_grid(OpPsi_g,Psi_g,Op)
-    CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-  END DO
+     DO ib = 1,Op%Basis%nb
+       Psi_b(:)  = ZERO
+       Psi_b(ib) = ONE
+       Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
+       Call OpPsi_grid(OpPsi_g,Psi_g,Op)
+       CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
+     END DO
 
-  Deallocate(Psi_b)
-  Deallocate(Psi_g)
-  Deallocate(OpPsi_g)
-  CASE ('smolyak')
+     Deallocate(Psi_b)
+     Deallocate(Psi_g)
+     Deallocate(OpPsi_g)
+   CASE ('smolyak')
 
-    Allocate(Psi%Smol_G(Op%Basis%Smolyak%NSQ))
-    Allocate(Psi%Vec_smol(Op%Basis%Smolyak%Maxtermsmol))
-    DO Ismol = 1,Op%Basis%Smolyak%Maxtermsmol
-     Allocate(Psi_b(Op%Basis%Smolyak%Nblp(Ismol)))
-     Allocate(Psi%Vec_smol(Ismol)%Smol_G_l(Op%Basis%Smolyak%Nqlp(Ismol)))
+     Allocate(Psi%Smol_G(Op%Basis%Smolyak%NSQ))
+     Allocate(Psi%Vec_smol(Op%Basis%Smolyak%Maxtermsmol))
+     DO Ismol = 1,Op%Basis%Smolyak%Maxtermsmol
+       Allocate(Psi_b(Op%Basis%Smolyak%Nblp(Ismol)))
+       Allocate(Psi%Vec_smol(Ismol)%Smol_G_l(Op%Basis%Smolyak%Nqlp(Ismol)))
       !DO ib = 1,Op%Basis%Smolyak%Nblp(Ismol)
         Psi_b(:)  = ZERO
         Psi_b(1)  = ONE
