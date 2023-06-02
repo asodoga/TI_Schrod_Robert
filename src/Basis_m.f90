@@ -1,4 +1,4 @@
-!===============================================================================
+ !===============================================================================
 !  This file is part of TI_Schrod_Robert.
 !
 !  TI_Schrod_Robert is a free software: you can redistribute it and/or modify
@@ -39,41 +39,19 @@ MODULE Basis_m
   PUBLIC :: Test_Passage,Calc_dngg_grid,Basis_IS_Allocatedtot,write_basis
   PUBLIC :: BasisTOGrid_Basis_rapide,GridTOBasis_Basis_rapide,Read_Construct_Basis
   PUBLIC :: BasisTOGrid_Basis_rapide1,GridTOBasis_Basis_rapide1,NDSmolyak_t
-  PUBLIC :: Read_Basis_old,Calc_n_smol,IND_Smolyak1_t,Calc_n_smol_1
+  PUBLIC :: Read_Basis_old,Calc_n_smol
 
-
-  TYPE :: IND_Smolyak1_t
-    Integer, allocatable              :: Nb_smol_1(:)
-  END TYPE  IND_Smolyak1_t
 
   TYPE :: NDSmolyak_t
-    Integer                       :: NSB   = 0
-    Integer                       :: NSQ   = 0
-    Integer                       :: Ndim  = 0
-    Integer                       :: Maxtermsmol  = 0
-    Integer                       :: N_compt
-    Integer, allocatable          :: Li_smo(:,:)
-    Integer, allocatable          :: Nqli(:,:)
-    Integer, allocatable          :: Nbli(:,:)
     Integer, allocatable          :: DSmol(:)
-    Integer, allocatable          :: Nblp(:)
-    Integer, allocatable          :: Nqlp(:)
-    !Integer, allocatable          :: Tags1(:)
-    Integer, allocatable          :: Sum_Nqlp(:)
-    Integer, allocatable          :: Sum_Nblp(:)
-    Integer, allocatable          :: NDend_smol_q(:,:)
-    Integer, allocatable          :: NDend_smol_b(:,:)
-    TYPE (IND_Smolyak1_t),allocatable :: SMOL_1(:)
-    TYPE (IND_Smolyak1_t),allocatable :: SMOL_3(:)
   END TYPE NDSmolyak_t
 
   TYPE :: Basis_t
     Integer                      :: nb_basis   = 0
     Integer                      :: nb         = 0
     Integer                      :: nq         = 0
-    Integer, allocatable         :: A_smol(:),B_smol(:)
+    Integer                      :: A_smol, B_smol
     Integer, allocatable         :: Tags1(:)
-    Integer, allocatable         :: Tags2(:)
     Integer, allocatable         :: Ind_map(:)
     Real(kind=Rk)                :: A,B,scaleQ,Q0
     Character(len=:),allocatable :: Basis_name
@@ -86,19 +64,13 @@ MODULE Basis_m
     Real(kind=Rk),   allocatable :: d1gg(:,:,:)    ! basis s d2gg(nq,nq,1)
     Real(kind=Rk),   allocatable :: d2gb(:,:,:,:)  ! basis s d2gb(nq,nb,1,1)
     Real(kind=Rk),   allocatable :: d2gg(:,:,:,:)  ! basis s d2gg(nq,nq,1,1)
-    TYPE(NDindex_t), allocatable :: NDindexq_smol(:)
-    TYPE(NDindex_t), allocatable :: NDindexb_smol(:)
     TYPE(NDindex_t)              :: NDindexq
     TYPE(NDindex_t)              :: NDindexb
     TYPE(NDindex_t)              :: NDindexl
-    TYPE(NDindex_t)              :: NDindex_smol_q
-    TYPE(NDindex_t)              :: NDindex_smol_b
     TYPE(NDSmolyak_t)            :: Smolyak
-    TYPE(NDSmolyak_t),allocatable:: Smolyak2(:)
-    TYPE(NDSmolyak_t),allocatable:: Smolyak1(:)
-    TYPE (Basis_t),  allocatable :: tab_basis(:)
-    TYPE (Basis_t),  allocatable :: tab_Smolyak(:)
-    TYPE (Basis_t),  allocatable :: tab_in_Smolyak(:)
+    TYPE(Basis_t),  allocatable  :: tab_basis(:)
+    TYPE(Basis_t),  allocatable  :: tab_Smolyak(:)
+    TYPE(Basis_t),  allocatable  :: tab_in_Smolyak(:)
   END TYPE Basis_t
 
 CONTAINS
@@ -146,70 +118,69 @@ CONTAINS
   END FUNCTION Basis_IS_Allocatedtot
 
   RECURSIVE SUBROUTINE Write_Basis(Basis)
-  USE UtilLib_m
+   USE UtilLib_m
 
-    TYPE(Basis_t),       intent(in)  :: Basis
-    Integer                          :: i
+   TYPE(Basis_t),       intent(in)  :: Basis
+   Integer                          :: i
 
-    write(out_unitp,*) '-------------------------------------------------'
-    write(out_unitp,*) 'Write_Basis'
-    write(out_unitp,*) 'nb,nq',Basis%nb,Basis%nq
+   write(out_unitp,*) '-------------------------------------------------'
+   write(out_unitp,*) 'Write_Basis'
+   write(out_unitp,*) 'nb,nq',Basis%nb,Basis%nq
 
-      write(out_unitp,*)"Aet B",Basis%A,Basis%B
-      write(out_unitp,*) 'Scaleq',Basis%Scaleq
-      write(out_unitp,*) 'Q0' ,Basis%Q0
-      IF (.NOT.Allocated(Basis%x)) THEN
-       write(out_unitp,*)' Basis table x is not Allocated.'
-      ELSE
-        Call Write_RVec(Basis%x,out_unitp,5,name_info='x')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%W)) THEN
-        write(out_unitp,*)' Basis table w is not Allocated.'
-      ELSE
-        Call Write_RVec(Basis%w,out_unitp,5,name_info='w')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%d0gb)) THEN
-        write(out_unitp,*)' Basis table d0gb is not Allocated.'
-      ELSE
-        Call Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%d1gb)) THEN
-        write(out_unitp,*)' Basis table d1gb is not Allocated.'
-      ELSE
-        Call Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%d1gg)) THEN
-        write(out_unitp,*)' Basis table d1gb is not Allocated.'
-      ELSE
-        Call Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%d2gb)) THEN
-        write(out_unitp,*)' Basis table d1gb is not Allocated.'
-      ELSE
-        Call Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
-      END IF
-      write(out_unitp,*)
-      IF (.NOT.Allocated(Basis%d2gg)) THEN
-        write(out_unitp,*)' Basis table d2gg is not Allocated.'
-      ELSE
-        Call Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
-      END IF
+     write(out_unitp,*)"Aet B",Basis%A,Basis%B
+     write(out_unitp,*) 'Scaleq',Basis%Scaleq
+     write(out_unitp,*) 'Q0' ,Basis%Q0
+     IF (.NOT.Allocated(Basis%x)) THEN
+      write(out_unitp,*)' Basis table x is not Allocated.'
+     ELSE
+       Call Write_RVec(Basis%x,out_unitp,5,name_info='x')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%W)) THEN
+       write(out_unitp,*)' Basis table w is not Allocated.'
+     ELSE
+       Call Write_RVec(Basis%w,out_unitp,5,name_info='w')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%d0gb)) THEN
+       write(out_unitp,*)' Basis table d0gb is not Allocated.'
+     ELSE
+       Call Write_RMat(Basis%d0gb,out_unitp,5,name_info='d0gb')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%d1gb)) THEN
+       write(out_unitp,*)' Basis table d1gb is not Allocated.'
+     ELSE
+       Call Write_RMat(Basis%d1gb(:,:,1),out_unitp,5,name_info='d1gb')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%d1gg)) THEN
+       write(out_unitp,*)' Basis table d1gb is not Allocated.'
+     ELSE
+       Call Write_RMat(Basis%d1gg(:,:,1),out_unitp,5,name_info='d1gg')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%d2gb)) THEN
+       write(out_unitp,*)' Basis table d1gb is not Allocated.'
+     ELSE
+       Call Write_RMat(Basis%d2gb(:,:,1,1),out_unitp,5,name_info='d2gb')
+     END IF
+     write(out_unitp,*)
+     IF (.NOT.Allocated(Basis%d2gg)) THEN
+       write(out_unitp,*)' Basis table d2gg is not Allocated.'
+     ELSE
+       Call Write_RMat(Basis%d2gg(:,:,1,1),out_unitp,5,name_info='d2gg')
+     END IF
 
-    !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
-    IF (Allocated(Basis%tab_basis)) THEN
-      DO i=1,size(Basis%tab_basis)
-        Call Write_Basis(Basis%tab_basis(i))
-      END DO
-    END IF
-    write(out_unitp,*) '-------------------------------------------------'
+   !  write(out_unitp,*) 'nb_basis',Basis%nb_basis
+   IF (Allocated(Basis%tab_basis)) THEN
+     DO i=1,size(Basis%tab_basis)
+       Call Write_Basis(Basis%tab_basis(i))
+     END DO
+   END IF
+   write(out_unitp,*) '-------------------------------------------------'
 
-  END SUBROUTINE Write_Basis
-
+ END SUBROUTINE Write_Basis
 
   SUBROUTINE Read_Basis_simple(name,nb_basis,LB,A_smol,B_smol,nb,nq,A,B,scaleQ,Q0,nio)
    USE UtilLib_m
@@ -242,6 +213,7 @@ CONTAINS
 
   SUBROUTINE Construct_basis_new (Basis)
    USE UtilLib_m
+   IMPLICIT NONE
      Logical,              parameter      :: debug = .true.
      !Logical,             parameter       ::debug = .false.
      TYPE(Basis_t),  intent(inout)        :: Basis
@@ -266,6 +238,7 @@ CONTAINS
 
 
   FUNCTION Calc_n_smol(A,B,l)
+   IMPLICIT NONE
    Integer, intent(in)     :: A
    Integer, intent(in)     :: B
    Integer, intent(in)     :: L
@@ -275,53 +248,28 @@ CONTAINS
 
   END FUNCTION Calc_n_smol
 
+  SUBROUTINE Check_index(I_smol,n,Tab_ind,Basis)
+   IMPLICIT NONE
+   TYPE(Basis_t), intent(inout)  :: Basis
+   Integer,      intent(in)      :: Tab_ind(:),n,I_smol
+   Integer                       :: I_compt
 
-  SUBROUTINE Calc_n_smol_1(Basis,A,B,J)
-
-   TYPE(Basis_t),  intent(inout):: Basis
-   Integer                      :: I,s,n
-   Integer, intent(in)          :: A
-   Integer, intent(in)          :: B
-   Integer, intent(in)          :: J
-
-   !DO J=1, Basis%Smolyak%Ndim
-   Allocate(Basis%Smolyak1(J)%Smol_1(Basis%NDindexl%L+1))
-   DO I=1,Basis%NDindexl%L+1
-    !write(out_unitp,*)
-     IF (I==1) THEN
-       n = Calc_n_smol(A,B,I-1)
-       Allocate(Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(n))
-       DO s=1,n
-         Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(s)=s
-
-         write(out_unitp,*) ' Nb_smol_1(s)', Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(s)
-       END DO
-     ELSE
-       n = Calc_n_smol(A,B,I-1)-Calc_n_smol(A,B,I-2)
-       Allocate(Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(n))
-       Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(1) = Calc_n_smol(A,B,I-2) +1
-       write(out_unitp,*) ' Nb_smol_1(s)',Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(1)
-       !write(out_unitp,*)
-       DO s = 2, n
-        Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(s) = Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(s-1)+1
-        write(out_unitp,*) ' Nb_smol_1(s)',Basis%Smolyak1(J)%Smol_1(I)%Nb_smol_1(s)
-       END DO
-     END IF
-     write(out_unitp,*)
+   DO I_compt = 1,Basis%NB
+      IF( ALL(Tab_ind(1:Basis%NDindexl%NDim) == Basis%tab_in_Smolyak(I_compt)%Tags1(1:Basis%NDindexl%NDim)))THEN
+        Basis%tab_Smolyak(I_smol)%Ind_map(n) = I_compt
+        exit
+      END IF
    END DO
-!write(out_unitp,*)
-  END SUBROUTINE Calc_n_smol_1
-
-
+  END SUBROUTINE Check_index
 
   SUBROUTINE Mapping_2G (Basis )
+    IMPLICIT NONE
     Logical,             parameter      :: debug = .true.
     !Logical,             parameter       :: debug = .false.
     TYPE(Basis_t),intent(inout)  :: Basis
     Integer                      :: I_smol,n,i,I_smol1,compt
     Integer, allocatable         :: Tab_ind(:)
     Integer, allocatable         :: Tab_li(:)
-    Integer, allocatable         :: Tags2(:,:)
     Integer, allocatable         :: Ndend(:,:)
     Integer, allocatable         :: Ndbeging(:)
     Integer                      :: Nbinter,I_smol2,I_compt
@@ -331,47 +279,48 @@ CONTAINS
     logical                      :: Endloop
 
 
-    Allocate(Tab_li(Basis%Smolyak%Ndim))
-    Allocate(Ndbeging(Basis%Smolyak%Ndim))
-    Allocate(Nbinter1(Basis%Smolyak%Ndim))
-    Allocate(Ndend(Basis%Smolyak%Maxtermsmol,Basis%Smolyak%Ndim))
+    Allocate(Tab_li(Basis%NDindexl%NDim))
+    Allocate(Ndbeging(Basis%NDindexl%NDim))
+    Allocate(Nbinter1(Basis%NDindexl%NDim))
+    Allocate(Ndend(Basis%NDindexl%Nterm,Basis%NDindexl%NDim))
 
     Call Init_tab_ind(Tab_li,Basis%NDindexl)
-
     I_smol = 0
     Compt  = 0
 
     DO
       I_smol = I_smol+1
-
       CALL increase_NDindex(Tab_li,Basis%NDindexl,Endloop)
-
-
-      Allocate(Tags1(Basis%Smolyak%Ndim))
-
-      DO i=1,Basis%Smolyak%Ndim
-        Ndend(I_smol,i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
+      Allocate(Tags1(Basis%NDindexl%NDim))
+      DO i=1,Basis%NDindexl%NDim
+        Ndend(I_smol,i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+        Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))
       END DO
 
-      DO i = 1,Basis%Smolyak%Ndim
+      DO i = 1,Basis%NDindexl%NDim
         IF(Tab_li(i)==0)THEN
-         Ndbeging(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
-         Nbinter1(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
+         Ndbeging(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))
+         Nbinter1(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))
         ELSE
-         Ndbeging(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i)-1) +1
-         Nbinter1(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i)) &
-                -Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i)-1)
+         Ndbeging(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i)-1) +1
+         Nbinter1(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i)) &
+                -Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+                Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i)-1)
         END IF
       END DO
 
       Nbinter  = Product(Nbinter1(:))
 
-      Tags1(1:Basis%Smolyak%Ndim) = Ndbeging(:)
+      Tags1(1:Basis%NDindexl%NDim) = Ndbeging(:)
       Tags1(1) = Ndbeging(1)-1
 
       DO  n = 1,Nbinter
         Tags1(1) = Tags1(1)+1
-        DO i = 1,Basis%Smolyak%Ndim-1
+        DO i = 1,Basis%NDindexl%NDim-1
           IF(Tags1(i)  >  Ndend(I_smol,i)) THEN
            Tags1(i+1) = Tags1(i+1)+1
            Tags1(i)   = Ndbeging(i)
@@ -395,127 +344,97 @@ CONTAINS
 
       CALL increase_NDindex(Tab_li,Basis%NDindexl,Endloop)
 
-      Allocate(Tags(Basis%Smolyak%Ndim+1))
-
-
-      DO i = 1,Basis%Smolyak%Ndim
+      Allocate(Tags(Basis%NDindexl%NDim+1))
+      DO i = 1,Basis%NDindexl%NDim
         IF(Tab_li(i)==0)THEN
-         Ndbeging(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
-         Nbinter1(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))
+         Ndbeging(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))
+         Nbinter1(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))
         ELSE
-         Ndbeging(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i)-1) +1
-         Nbinter1(i) = Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i))&
-                -Calc_n_smol(Basis%A_smol(i),Basis%B_smol(i),Tab_li(i)-1)
+         Ndbeging(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i)-1) +1
+         Nbinter1(i) = Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+         Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i))&
+                -Calc_n_smol(Basis%tab_Smolyak(I_smol)%tab_basis(i)%A_smol,&
+                Basis%tab_Smolyak(I_smol)%tab_basis(i)%B_smol,Tab_li(i)-1)
         END IF
       END DO
 
       Nbinter  = Product(Nbinter1(:))
-
-      Tags(1:Basis%Smolyak%Ndim) = Ndbeging(:)
+      Tags(1:Basis%NDindexl%NDim) = Ndbeging(:)
       Tags(1) = Ndbeging(1)-1
 
       DO  n = 1,Nbinter
         Tags(1) = Tags(1)+1
-        DO i = 1,Basis%Smolyak%Ndim-1
+        DO i = 1,Basis%NDindexl%NDim-1
           IF(Tags(i)  >  Ndend(I_smol2,i)) THEN
            Tags(i+1) =  Tags(i+1)+1
            Tags(i)   =  Ndbeging(i)
           END IF
         END DO
-
         Compt=Compt+1
-
-        Allocate(Basis%tab_in_Smolyak(Compt)%Tags1(Basis%Smolyak%Ndim+1))
-
-        Tags(Basis%Smolyak%Ndim+1)        = Compt
-        Basis%tab_in_Smolyak(Compt)%Tags1 = Tags
-
+        Allocate(Basis%tab_in_Smolyak(Compt)%Tags1(Basis%NDindexl%NDim+1))
+        Tags(Basis%NDindexl%NDim+1)        = Compt
+        Basis%tab_in_Smolyak(Compt)%Tags1  = Tags
       END DO
       Deallocate(Tags)
       IF (Endloop) exit
     END DO
+  !  Basis%NB = compt
+    Basis%NB = compt
+    Allocate(Tab_ind(Basis%NDindexl%NDim))
 
-    Basis%Smolyak%N_compt = compt
-
-    Allocate(Tab_ind(Basis%Smolyak%Ndim))
-
-    DO I_smol=1,Basis%Smolyak%Maxtermsmol
-      Allocate(Tags2(Basis%tab_Smolyak(I_smol)%nb,Basis%Smolyak%Ndim+1))
+    DO I_smol=1,Basis%NDindexl%Nterm
       Allocate(Basis%tab_Smolyak(I_smol)%Ind_map(Basis%tab_Smolyak(I_smol)%nb))
       Tab_ind(:) = 1
       Tab_ind(1) = 0
-      Do n=1,Basis%tab_Smolyak(I_smol)%nb
-        Tab_ind(1) = Tab_ind(1)+1
-        DO i=1,Basis%Smolyak%Ndim-1
-          IF(Tab_ind(i)  > Ndend(I_smol,i)) THEN
-           Tab_ind(i+1) = Tab_ind(i+1)+1
-           Tab_ind(i)   = 1
-          END IF
-        END DO
-
-        DO I_compt = 1,Basis%Smolyak%N_compt
-           IF( ALL(Tab_ind(1:Basis%Smolyak%Ndim) == Basis%tab_in_Smolyak(I_compt)%Tags1(1:Basis%Smolyak%Ndim)))THEN
-             Tags2(n,:) = Basis%tab_in_Smolyak(I_compt)%Tags1(:)
-             Basis%tab_Smolyak(I_smol)%Ind_map(n)= I_compt
-             exit
-           END IF
-        END DO
-
+      DO  n = 1,Basis%tab_Smolyak(I_smol)%nb
+        CALL increase_NDindex_simple(Tab_ind,Ndend(I_smol,:),Basis%NDindexl)
+        CALL Check_index(I_smol,n,Tab_ind,Basis)
       END DO
-      Deallocate(Tags2)
     END DO
-
   END SUBROUTINE Mapping_2G
 
+
+
   SUBROUTINE test_smolyak(Basis)
-    USE UtilLib_m
+   USE UtilLib_m
+   IMPLICIT NONE
     TYPE(Basis_t), intent(inout)  :: Basis
     Integer                       :: I_smol,n,i,I_smol1,I_compt
-    Real(kind=Rk), allocatable    :: Vsort(:),V_entre(:)
+    Real(kind=Rk), allocatable    :: Vsort(:),V_entre(:),Vb(:),Vg(:)
 
-    Allocate(V_entre(Basis%Smolyak%N_compt))
-    Allocate(Vsort(Basis%Smolyak%N_compt))
+    Allocate(V_entre(Basis%NB ))
+    Allocate(Vsort(Basis%NB ))
     V_entre(:) = Three
     V_entre(1) = One
 
-
-
-    DO I_smol = 1,Basis%Smolyak%Maxtermsmol
+    DO I_smol = 1,Basis%NDindexl%Nterm
 
       Allocate(Basis%tab_Smolyak(I_smol)%Vb(Basis%tab_Smolyak(I_smol)%nb))
       Allocate(Basis%tab_Smolyak(I_smol)%Vg(Basis%tab_Smolyak(I_smol)%nq))
+
       DO n = 1,Basis%tab_Smolyak(I_smol)%nb
         I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-        !DO  I_compt = 1,Basis%Smolyak%N_compt
-         !IF(I_compt==Basis%tab_Smolyak(I_smol)%Ind_map(n) ) THEN
-          Basis%tab_Smolyak(I_smol)%Vb(n) = V_entre(I_compt)
-         !END IF
-        !END DO
+        Basis%tab_Smolyak(I_smol)%Vb(n) = V_entre(I_compt)
       END DO
-      write(out_unitp,*) Basis%tab_Smolyak(I_smol)%Vb
+
       Call BasisTOGrid_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vg,Basis%tab_Smolyak(I_smol)%Vb, Basis%tab_Smolyak(I_smol))
       Call GridTOBasis_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vb,Basis%tab_Smolyak(I_smol)%Vg, Basis%tab_Smolyak(I_smol))
-      write(out_unitp,*) Basis%tab_Smolyak(I_smol)%Vb
-      write(out_unitp,*) Basis%Smolyak%DSmol(I_smol)
-      !Basis%tab_Smolyak(I_smol)%Vb = Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb
 
     END DO
-     Vsort(:)=ZERO
-  !  DO  I_compt = 1,Basis%Smolyak%N_compt
-      DO I_smol = 1,Basis%Smolyak%Maxtermsmol
-        DO n = 1,Basis%tab_Smolyak(I_smol)%nb
-          I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-         !IF(I_compt==Basis%tab_Smolyak(I_smol)%Ind_map(n))THEN
-           Vsort(I_compt)= Vsort(I_compt)+ Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb(n)
-         !END IF
-        END DO
+    Vsort(:)=ZERO
+    DO I_smol = 1,Basis%NDindexl%Nterm
+      DO n = 1,Basis%tab_Smolyak(I_smol)%nb
+        I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
+        Vsort(I_compt)= Vsort(I_compt)+ Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb(n)
       END DO
-  !  END DO
-
-    DO  I_compt = 1,Basis%Smolyak%N_compt
+    END DO
+    DO  I_compt = 1,Basis%NB
       write(out_unitp,*)   V_entre(I_compt),':',Vsort(I_compt)
     END DO
-
+      write(out_unitp,*) 'Difmax',Maxval( V_entre(:)-Vsort(:))
   END SUBROUTINE test_smolyak
 
   SUBROUTINE Read_Construct_Basis(Basis,nio)
@@ -539,16 +458,20 @@ CONTAINS
 
     Call Read_Basis_simple(name,nb_basis,LB,A_smol,B_smol,nb,nq,A,B,scaleQ,Q0,nio)
     Basis%Basis_name        = name
-
+    Call string_uppercase_TO_lowercase(Basis%Basis_name)
     IF (nb_basis > 1) THEN
 
       NDim = nb_basis
       Basis%NDindexq%sys_type = name
       Basis%NDindexb%sys_type = name
       Basis%NDindexl%sys_type = name
+
+      Basis%NDindexl%NDim = nb_basis
+      Basis%NDindexq%NDim = nb_basis
+      Basis%NDindexb%NDim = nb_basis
       Basis%NDindexl%L        = LB
 
-      Call string_uppercase_TO_lowercase(Basis%Basis_name)
+
       Call string_uppercase_TO_lowercase(Basis%NDindexl%sys_type)
       Call string_uppercase_TO_lowercase(Basis%NDindexq%sys_type)
       Call string_uppercase_TO_lowercase(Basis%NDindexb%sys_type)
@@ -580,7 +503,6 @@ CONTAINS
         DO i=1,NDim
           NDend_q(i)=Basis%tab_basis(i)%nq
           NDend_b(i)=Basis%tab_basis(i)%nb
-          !NDend_l(i)=Basis%tab_basis(i)%nb
         END DO
 
         Call Init_NDindex(Basis%NDindexq,NDend_q,NDim)
@@ -588,78 +510,75 @@ CONTAINS
 
       CASE ('smolyak')
 
-        Basis%Smolyak%Ndim = nb_basis
-        Allocate(NDend_l(Basis%Smolyak%Ndim))
-        Allocate(Tab_ind(Basis%Smolyak%Ndim))
-        Allocate(Tab_ind1(Basis%Smolyak%Ndim))
-        !Allocate(Tab_li(Basis%Smolyak%Ndim))
-        Allocate(Tags1(Basis%Smolyak%Ndim+1))
+        Allocate(NDend_l(Basis%NDindexl%NDim))
+        Allocate(Tab_ind(Basis%NDindexl%NDim))
+        Allocate(Tab_ind1(Basis%NDindexl%NDim))
+        Allocate(Tags1(Basis%NDindexl%NDim+1))
 
         NDend_l(:)=Basis%NDindexl%L
-        Call Init_NDindex(Basis%NDindexl,NDend_l,Basis%Smolyak%Ndim)
+        Call Init_NDindex(Basis%NDindexl,NDend_l,Basis%NDindexl%NDim)
         Call Init_tab_ind(Tab_ind,Basis%NDindexl)
         I=0
-        Do
+        DO
           I=I+1
           CALL increase_NDindex(Tab_ind,Basis%NDindexl,Endloop)
-          Basis%Smolyak%Maxtermsmol = I
-          write(out_unitp,*)I,Tab_ind
+          Basis%NDindexl%Nterm = I
           IF (Endloop) exit
         END DO
         Deallocate(Tab_ind)
-        write(out_unitp,*)"Basis%Smolyak%Maxtermsmol",Basis%Smolyak%Maxtermsmol
 
-        Allocate(Basis%Smolyak%Li_smo(Basis%Smolyak%Maxtermsmol,Basis%Smolyak%Ndim))
-        Allocate(Basis%Smolyak%DSmol(Basis%Smolyak%Maxtermsmol))
-
-        Allocate(Basis%NDindexq_smol(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%NDindexb_smol(Basis%Smolyak%Maxtermsmol))
+        Allocate(Basis%Smolyak%DSmol(Basis%NDindexl%Nterm))
 
         Call Init_tab_ind(Tab_ind1,Basis%NDindexl)
         I=0
-        Do
+        DO
           I=I+1
           CALL increase_NDindex(Tab_ind1,Basis%NDindexl,Endloop)
-          CALL Weight_D_smol (Basis%Smolyak%DSmol(I),Basis%NDindexl%L,sum(Tab_ind1),Basis%Smolyak%Ndim)
-
-          Do inb=1,Basis%Smolyak%Ndim
-            Basis%Smolyak%Li_smo(I,inb ) = tab_ind1(inb)
-          END DO
+          CALL Weight_D_smol (Basis%Smolyak%DSmol(I),Basis%NDindexl%L,sum(Tab_ind1),Basis%NDindexl%NDim)
           IF (Endloop) exit
         END DO
         Deallocate(Tab_ind1)
 
-        Allocate(Basis%tab_Smolyak(Basis%Smolyak%Maxtermsmol))
-        DO I=1,Basis%Smolyak%Maxtermsmol
-          Allocate(Basis%tab_Smolyak(I)%tab_basis(Basis%Smolyak%Ndim))
+        Allocate(Basis%tab_Smolyak(Basis%NDindexl%Nterm))
+
+        Allocate(Tab_ind(Basis%NDindexl%NDim))
+
+        Call Init_tab_ind(Tab_ind,Basis%NDindexl)
+        I=0
+        DO
+          I=I+1
+          CALL increase_NDindex(Tab_ind,Basis%NDindexl,Endloop)
+
+          Allocate(Basis%tab_Smolyak(I)%NDindexb%Li_smol(Basis%NDindexl%NDim))
+
+          DO inb=1,Basis%NDindexl%NDim
+            Basis%tab_Smolyak(I)%NDindexb%Li_smol(inb) = tab_ind(inb)
+          END DO
+          IF (Endloop) exit
+        END DO
+        Deallocate(Tab_ind)
+
+
+        DO I=1,Basis%NDindexl%Nterm
+          Allocate(Basis%tab_Smolyak(I)%tab_basis(Basis%NDindexl%NDim))
         END DO
 
-        Allocate(Basis%Smolyak%Nqlp(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%Smolyak%Nblp(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%Smolyak%Sum_Nqlp(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%Smolyak%Sum_Nblp(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%Smolyak1(Basis%Smolyak%Ndim))
-        Allocate(Basis%Smolyak2(Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%A_smol(Basis%Smolyak%Ndim))
-        Allocate(Basis%B_smol(Basis%Smolyak%Ndim))
 
-
-        DO J=1, Basis%Smolyak%Ndim
+        DO J=1, Basis%NDindexl%NDim
          Call Read_Basis_simple(name,nb_basis,LB,A_smol,B_smol,nb,nq,A,B,scaleQ,Q0,nio)
 
-         Basis%A_smol(J)= A_smol
-         Basis%B_smol(J)= B_smol
-
-         Call Calc_n_smol_1(Basis,A_smol,B_smol,J)
-         DO I=1,Basis%Smolyak%Maxtermsmol
+         DO I=1,Basis%NDindexl%Nterm
+           Basis%tab_Smolyak(I)%Basis_name = 'dp'
            Basis%tab_Smolyak(I)%tab_basis(J)%nb_basis= nb_basis
+           Basis%tab_Smolyak(I)%tab_basis(J)%A_smol = A_smol
+           Basis%tab_Smolyak(I)%tab_basis(J)%B_smol = B_smol
            Basis%tab_Smolyak(I)%tab_basis(J)%A       = A
            Basis%tab_Smolyak(I)%tab_basis(J)%B       = B
            Basis%tab_Smolyak(I)%tab_basis(J)%scaleQ  = scaleQ
            Basis%tab_Smolyak(I)%tab_basis(J)%Q0      = Q0
 
-           Basis%tab_Smolyak(I)%tab_basis(J)%nq = Calc_n_smol(A_smol,B_smol,Basis%Smolyak%Li_smo(I,J))
-           Basis%tab_Smolyak(I)%tab_basis(J)%nb = Calc_n_smol(A_smol,B_smol,Basis%Smolyak%Li_smo(I,J))
+           Basis%tab_Smolyak(I)%tab_basis(J)%nq = Calc_n_smol(A_smol,B_smol,Basis%tab_Smolyak(I)%NDindexb%Li_smol(J))
+           Basis%tab_Smolyak(I)%tab_basis(J)%nb = Calc_n_smol(A_smol,B_smol,Basis%tab_Smolyak(I)%NDindexb%Li_smol(J))
 
            Basis%tab_Smolyak(I)%tab_basis(J)%Basis_name = trim(adjustl(name))
            Call Construct_basis_new (Basis%tab_Smolyak(I)%tab_basis(J))
@@ -667,46 +586,27 @@ CONTAINS
          END DO
         END DO
 
+        DO I=1,Basis%NDindexl%Nterm
+          Basis%tab_Smolyak(I)%nb = product(Basis%tab_Smolyak(I)%tab_basis(:)%nb)
+          Basis%tab_Smolyak(I)%nq = product(Basis%tab_Smolyak(I)%tab_basis(:)%nq)
+          Basis%tab_Smolyak(I)%NDindexb%sys_type = 'dp'
+          Basis%tab_Smolyak(I)%NDindexq%sys_type = 'dp'
 
-        Allocate(Basis%Smolyak%NDend_smol_q(Basis%Smolyak%Ndim,Basis%Smolyak%Maxtermsmol))
-        Allocate(Basis%Smolyak%NDend_smol_b(Basis%Smolyak%Ndim,Basis%Smolyak%Maxtermsmol))
+          Allocate(NDend_q(Basis%NDindexl%NDim))
+          Allocate(NDend_b(Basis%NDindexl%NDim))
 
-        DO I=1, Basis%Smolyak%Maxtermsmol
-        DO J=1, Basis%Smolyak%Ndim
-          Basis%Smolyak%NDend_smol_q(J,I) = Basis%tab_Smolyak(I)%tab_basis(J)%nq
-          Basis%Smolyak%NDend_smol_b(J,I) = Basis%tab_Smolyak(I)%tab_basis(J)%nb
+          DO J=1,Basis%NDindexl%NDim
+            NDend_q(J) = Basis%tab_Smolyak(I)%tab_basis(J)%nq
+            NDend_b(J) = Basis%tab_Smolyak(I)%tab_basis(J)%nb
+          END DO
+
+          Call Init_NDindex(Basis%tab_Smolyak(I)%NDindexq,NDend_q,Basis%NDindexl%NDim)
+          Call Init_NDindex(Basis%tab_Smolyak(I)%NDindexb,NDend_b,Basis%NDindexl%NDim)
+
+          Deallocate(NDend_q)
+          Deallocate(NDend_b)
 
         END DO
-        END DO
-
-
-        !Call Mapping_1 (Basis )
-
-
-        DO I=1, Basis%Smolyak%Maxtermsmol
-          Basis%NDindexq_smol(I)%sys_type = 'dp'
-          Basis%NDindexb_smol(I)%sys_type = 'dp'
-          Call Init_NDindex(Basis%NDindexq_smol(I),Basis%Smolyak%NDend_smol_q(:,I),Basis%Smolyak%Ndim)
-          Call Init_NDindex(Basis%NDindexb_smol(I),Basis%Smolyak%NDend_smol_b(:,I),Basis%Smolyak%Ndim)
-          Basis%Smolyak%Nblp(I)     = Product(Basis%tab_Smolyak(I)%tab_basis(:)%nb)
-          Basis%Smolyak%Nqlp(I)     = Product(Basis%tab_Smolyak(I)%tab_basis(:)%nq)
-          Basis%tab_Smolyak(I)%nb   = Product(Basis%tab_Smolyak(I)%tab_basis(:)%nb)
-          Basis%tab_Smolyak(I)%nq   = Product(Basis%tab_Smolyak(I)%tab_basis(:)%nq)
-        END DO
-
-        DO I=1, Basis%Smolyak%Maxtermsmol
-         IF(I==1) THEN
-           Basis%Smolyak%Sum_Nqlp(I) =  Basis%Smolyak%Nqlp(I)
-           Basis%Smolyak%Sum_Nblp(I) =  Basis%Smolyak%Nblp(I)
-         ELSE
-           Basis%Smolyak%Sum_Nqlp(I) = Basis%Smolyak%Sum_Nqlp(I-1) + Basis%Smolyak%Nqlp(I)
-           Basis%Smolyak%Sum_Nblp(I) = Basis%Smolyak%Sum_Nblp(I-1) + Basis%Smolyak%Nblp(I)
-         END IF
-        END DO
-
-
-        Basis%Smolyak%NSB       =  Sum(Basis%Smolyak%Nblp)
-        Basis%Smolyak%NSQ       =  Sum(Basis%Smolyak%Nqlp)
 
         Call  Mapping_2G (Basis )
         CALL test_smolyak(Basis)
@@ -725,6 +625,7 @@ CONTAINS
       Call Construct_basis_new (Basis)
     END IF
  END SUBROUTINE read_construct_basis
+
 
  FUNCTION Factoriel(n)
    Integer             :: Factoriel
@@ -747,8 +648,9 @@ CONTAINS
    Integer                 :: Binomial
    Integer, intent(in)     :: K
    Integer, intent(in)     :: n
+
     Binomial = Factoriel(n)/(Factoriel(K)*Factoriel(n-K))
-  !  Write(*,*)'n=',n,'k=',K,'Binomial=',Binomial
+
  END FUNCTION Binomial
 
  SUBROUTINE Weight_D_smol ( D,L,Som_l,NDIM)
@@ -759,7 +661,7 @@ CONTAINS
 
   D = ((-1)**(L-Som_l))*Binomial(L-Som_l,NDIM-1)
 
-END SUBROUTINE Weight_D_smol
+ END SUBROUTINE Weight_D_smol
 
 
  RECURSIVE SUBROUTINE Read_Basis_old (Basis,nio)
@@ -785,7 +687,7 @@ END SUBROUTINE Weight_D_smol
    Q0        = ZERO
    scaleQ    = ONE
    name      = '0'
-   !sys_type  = 'dp'
+
 
    read(nio,nml=basis_nD,IOSTAT=err_io)
    write(out_unitp,nml=basis_nD)
@@ -854,10 +756,7 @@ END SUBROUTINE Weight_D_smol
      Basis%Basis_name     = trim(adjustl(name))
      Call Construct_basis_new (Basis)
   END IF
-END SUBROUTINE Read_Basis_old
-
-
-
+ END SUBROUTINE Read_Basis_old
 
 
  SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
@@ -910,7 +809,7 @@ END SUBROUTINE Read_Basis_old
       Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)
 
     END DO
-    !write(*,*)'Basis%d0gb(iq,ib)' ,Basis%d0gb(iq,:)
+
   END DO
  END SUBROUTINE Construct_Basis_Ho
 

@@ -156,21 +156,26 @@ module Molec_m
        ScaleQ(1) = sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
        ScaleQ(2) = sqrt(m(2)*sqrt(HALF*Fr/(m(2))))
 
-       DO inb = 1, 3
+       DO inb = 1, Molec%ndim
          Write(*,*)inb, 'ScaleQ=',ScaleQ(inb)
        END DO
 
       CASE ('SYM')
-       Q0(1)=QML0(1)
-       Q0(2)=QML0(2)
-       Q0(3)=QML0(3)
+
+        DO inb = 1,Molec%ndim
+          Q0(inb) = QML0(inb)
+        END DO
+
+       !Q0(1)=QML0(1)
+       !Q0(2)=QML0(2)
+       !Q0(3)=QML0(3)
 
        Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
        Call sub_Qmodel_VGH(Mat_V,G,H,QML0)
 
-       DO inb =1,3
+       DO inb = 1,Molec%ndim
          m(inb)      = -one/(2*F2(inb,inb))
-         ScaleQ(inb) =sqrt(m(inb)*sqrt(H(1,1,inb,inb)/m(inb)))
+         ScaleQ(inb) = sqrt(m(inb)*sqrt(H(1,1,inb,inb)/m(inb)))
          Write(*,*)inb, 'ScaleQ(inb)=',ScaleQ(inb)
        END DO
 
@@ -219,7 +224,7 @@ module Molec_m
     !Logical,       parameter     :: debug = .true.
     Logical,       parameter      :: debug = .false.
     Logical,       parameter      :: Pot_calc = .false.
-    integer                       :: iq1,iq2,I
+    integer                       :: iq1,iq2,I, inb
 
 
     IF (debug) THEN
@@ -246,9 +251,14 @@ module Molec_m
        QQML(2)= HALF*(Q(1)+Q(2))
        QQML(3)= HALF*(Q(1)-Q(2))
       CASE ('SYM')
-       QQML(1)= Q(1)
-       QQML(2)= Q(2)
-       QQML(3)= Q(3)
+
+       DO inb = 1,Molec%ndim
+         QQML(inb)= Q(inb)
+       END DO
+
+       !QQML(1)= Q(1)
+       !QQML(2)= Q(2)
+       !QQML(3)= Q(3)
       CASE DEFAULT
         STOP 'sym_type is bad'
       END SELECT
