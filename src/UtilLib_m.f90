@@ -27,7 +27,7 @@
 MODULE UtilLib_m
 USE NumParameters_m
 IMPLICIT NONE
-
+PUBLIC :: Factoriel,Binomial
 
 CONTAINS
 
@@ -370,5 +370,32 @@ CONTAINS
 !$OMP    END CRITICAL (Read_RVec_CRIT)
 
   END SUBROUTINE Read_RVec
+
+
+   FUNCTION Factoriel(n)
+     Integer             :: Factoriel
+     Integer, intent(in) :: n
+     Integer             :: i
+
+     IF(n==0) THEN
+      Factoriel = 1
+     ELSE IF(n<0) THEN
+      Factoriel=1
+     ELSE
+      Factoriel=1
+      Do i=1,n
+       Factoriel = Factoriel*i
+      END DO
+     END IF
+   END FUNCTION Factoriel
+
+   FUNCTION Binomial(K,n)
+     Integer                 :: Binomial
+     Integer, intent(in)     :: K
+     Integer, intent(in)     :: n
+
+      Binomial = Factoriel(n)/(Factoriel(K)*Factoriel(n-K))
+
+   END FUNCTION Binomial
 
 END MODULE UtilLib_m

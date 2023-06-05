@@ -31,7 +31,10 @@
 !===============================================================================
 MODULE Basis_m
   USE NumParameters_m
+  USE UtilLib_m
   USE NDindex_m
+
+
   IMPLICIT NONE
 
   PRIVATE
@@ -409,28 +412,30 @@ CONTAINS
     Allocate(Vsort(Basis%NB ))
     V_entre(:) = Three
     V_entre(1) = One
-
-    DO I_smol = 1,Basis%NDindexl%Nterm
-
-      Allocate(Basis%tab_Smolyak(I_smol)%Vb(Basis%tab_Smolyak(I_smol)%nb))
-      Allocate(Basis%tab_Smolyak(I_smol)%Vg(Basis%tab_Smolyak(I_smol)%nq))
-
-      DO n = 1,Basis%tab_Smolyak(I_smol)%nb
-        I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-        Basis%tab_Smolyak(I_smol)%Vb(n) = V_entre(I_compt)
-      END DO
-
-      Call BasisTOGrid_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vg,Basis%tab_Smolyak(I_smol)%Vb, Basis%tab_Smolyak(I_smol))
-      Call GridTOBasis_Basis_rapide1(Basis%tab_Smolyak(I_smol)%Vb,Basis%tab_Smolyak(I_smol)%Vg, Basis%tab_Smolyak(I_smol))
-
-    END DO
     Vsort(:)=ZERO
     DO I_smol = 1,Basis%NDindexl%Nterm
+
+      Allocate(Vb(Basis%tab_Smolyak(I_smol)%nb))
+      Allocate(Vg(Basis%tab_Smolyak(I_smol)%nq))
+
       DO n = 1,Basis%tab_Smolyak(I_smol)%nb
         I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-        Vsort(I_compt)= Vsort(I_compt)+ Basis%Smolyak%DSmol(I_smol)*Basis%tab_Smolyak(I_smol)%Vb(n)
+        Vb(n) = V_entre(I_compt)
       END DO
+
+      Call BasisTOGrid_Basis_rapide1(Vg,Vb, Basis%tab_Smolyak(I_smol))
+      Call GridTOBasis_Basis_rapide1(Vb,Vg, Basis%tab_Smolyak(I_smol))
+
+      DO n = 1,Basis%tab_Smolyak(I_smol)%nb
+        I_compt = Basis%Tab_Smolyak(I_smol)%Ind_map(n)
+        Vsort(I_compt)= Vsort(I_compt)+ Basis%Smolyak%DSmol(I_smol)*Vb(n)
+      END DO
+      Deallocate(Vb)
+      Deallocate(Vg)
+
     END DO
+
+
     DO  I_compt = 1,Basis%NB
       write(out_unitp,*)   V_entre(I_compt),':',Vsort(I_compt)
     END DO
@@ -627,31 +632,6 @@ CONTAINS
  END SUBROUTINE read_construct_basis
 
 
- FUNCTION Factoriel(n)
-   Integer             :: Factoriel
-   Integer, intent(in) :: n
-   Integer             :: i
-
-   IF(n==0) THEN
-    Factoriel = 1
-   ELSE IF(n<0) THEN
-    Factoriel=1
-   ELSE
-    Factoriel=1
-    Do i=1,n
-     Factoriel = Factoriel*i
-    END DO
-   END IF
- END FUNCTION Factoriel
-
- FUNCTION Binomial(K,n)
-   Integer                 :: Binomial
-   Integer, intent(in)     :: K
-   Integer, intent(in)     :: n
-
-    Binomial = Factoriel(n)/(Factoriel(K)*Factoriel(n-K))
-
- END FUNCTION Binomial
 
  SUBROUTINE Weight_D_smol ( D,L,Som_l,NDIM)
   Integer,   intent(in)       :: NDIM

@@ -54,7 +54,7 @@ MODULE Op_m
   END TYPE Op_t
 
   Public :: Op_t,Write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op
-  Public :: OpPsi_gridnD,Grid_t,Make_Mat_OP_gen,Make_mat
+  Public :: OpPsi_gridnD,Grid_t,Make_mat
 
 CONTAINS
 
@@ -348,200 +348,114 @@ CONTAINS
     END IF
   END SUBROUTINE Set_grid_op
 
-  SUBROUTINE Make_Mat_OP_gen(Op,Psi)
+  SUBROUTINE Diago_Op(Op)
    USE Molec_m
    USE Basis_m
-    IMPLICIT  NONE
-    TYPE (Op_t),     intent(inout)      :: Op
-    TYPE (Psi_t),     intent(inout)     :: Psi
-    !Logical,          parameter        :: debug = .true.
+    TYPE(Op_t),     intent(inout)       :: Op
+    !Logical,          parameter         :: debug = .true.
     Logical,         parameter          :: debug = .false.
-    Integer                             :: ib,iq,jb,ib1,ib2,I_smol,I_compt,n
-    Real (kind=Rk), allocatable         :: Psi_g(:)
-    Real (kind=Rk), allocatable         :: Psi_b(:)
-    Real (kind=Rk), allocatable         :: OpPsi_g(:)
+    Integer                             :: jb,inb,ndim
+    Integer                             :: ib,iq,L
+    Logical                             :: Endloop_q
+    Integer,        allocatable         :: tab_iq(:),NDinit(:),NDend(:)
+    Real (kind=Rk), allocatable         :: EigenVal(:), EigenVec(:,:), Psi_g(:), DifEigen(:)
+    Real (kind=Rk), allocatable         :: Qmoy(:), Rho_r(:,:), omega(:)
+    Real (kind=Rk)                      :: W,Wr
 
     IF (debug) THEN
-     Write(out_unitp,*) 'BEGINNING Make_Mat_OP'
-     Call Write_Op(Op)
+     Write(out_unitp,*) 'BEGINNING Diago_Op'
+     flush(out_unitp)
+    END IF
+
+    Allocate(DifEigen(Op%Basis%nb))
+    !Allocate(omega(Op%Basis%nb))
+    Allocate(EigenVal(Op%Basis%nb))
+    Allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
+    !Call Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
+    !Call Diago_Arpack(EigenVec,EigenVal,Op%Basis%nb,Op%Basis%nb,Op%Basis%nb,Op%RMat)
+    Call  diagonalization(Op%RMat,EigenVal,EigenVec,Op%Basis%nb)
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+    Write(out_unitp,*) 'eigenvalues = '
+    Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
+    DO ib=1,5!Op%Basis%nb
+     DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
+     Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
+    END DO
+
+    Write(out_unitp,*)
+    Write(out_unitp,*)
+
+    IF (debug) THEN
+     Allocate(Psi_g(Op%Basis%nq))
+     Call BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
+
+     Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
+     Allocate(Qmoy(size(Op%Basis%tab_basis)))
+     Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+     Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+     Qmoy(:)=ZERO
+     Iq=0
+     DO
+      Iq=Iq+1
+      Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+      IF (Endloop_q) exit
+      W=1
+      Do inb=1,size(Op%Basis%tab_basis)
+       W =  W * Op%Basis%tab_basis(inb)%W(tab_iq(inb))
+      END DO
+      W =  W*Psi_g(Iq)**2
+      DO inb=1,size(Op%Basis%tab_basis)
+       Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb))*W
+       Rho_r(iq,inb)=  W /Op%Basis%tab_basis(inb)%W(tab_iq(inb))
+      END DO
+     END DO
+     DO inb = 1,size(Op%Basis%tab_basis)
+      Write(out_unitp,*)'Qmoy(inb)',Qmoy(inb)
+     END DO
+     Open(1,file='Rho_r.dat',status='replace')
+     DO iq = 1,Op%Basis%nq,20
+     Write(1,*)iq, (Rho_r(iq,jb),jb=1,size(Op%Basis%tab_basis))
+     END DO
+     Close(1)
+     Deallocate(Rho_r)
+     Deallocate(Qmoy)
+     Deallocate(tab_iq)
+    END  IF
+    Deallocate(EigenVal)
+    Deallocate(EigenVec)
+
+    IF (debug) THEN
+     Write(out_unitp,*) 'END Diago_Op'
+     flush(out_unitp)
+    END IF
+  END SUBROUTINE Diago_Op
+
+  SUBROUTINE Potential(Op)
+   USE Basis_m
+   USE Molec_m
+    Logical,          parameter         :: debug = .true.
+    !Logical,         parameter          :: debug = .false.
+    Logical                             :: Endloop_q
+    Integer ,allocatable                :: tab_iq(:)
+    Integer                             :: iq,inb
+    Real (kind=Rk), allocatable         :: Q(:)
+    TYPE(Op_t),  intent(inout)          :: Op
+    Real (kind=Rk)                      :: V
+
+    IF (debug) THEN
+     Write(out_unitp,*) 'BEGINNING Potential '
      Call Write_basis(Op%Basis)
      flush(out_unitp)
     END IF
 
-    SELECT CASE (Op%Basis%Basis_name)
-     CASE ('dp')
-      Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
-      Allocate(Psi_b(Op%Basis%nb))
-      Allocate(Psi_g(Op%Basis%nq))
-      Allocate(OpPsi_g(Op%Basis%nq))
-
-      DO ib = 1,Op%Basis%nb
-       Psi_b(:)  = ZERO
-       Psi_b(ib) = ONE
-       Call BasisTOGrid_Basis_rapide1(Psi_g,Psi_b,Op%Basis)
-       Call OpPsi_grid(OpPsi_g,Psi_g,Op)
-       CALL GridTOBasis_Basis_rapide1(Op%RMat(:,ib),OpPsi_g,Op%Basis)
-      END DO
-
-      Deallocate(Psi_b)
-      Deallocate(Psi_g)
-      Deallocate(OpPsi_g)
-     CASE ('smolyak')
-      ! Stop 'robert est là'
-      Allocate(Op%RMat(Op%Basis%nb,Op%Basis%nb))
-      Allocate(Psi_b(Op%Basis%nb))
-      DO ib = 1,Op%Basis%nb
-        Psi_b(:)  = ZERO
-        Psi_b(ib) = ONE
-
-
-        DO I_smol = 1,Op%Basis%NDindexl%Nterm
-
-         Allocate(Op%Op_smol(I_smol)%Vb(Op%Basis%tab_Smolyak(I_smol)%nb))
-         Allocate(Op%Op_smol(I_smol)%Vg(Op%Basis%tab_Smolyak(I_smol)%nq))
-         Allocate(OpPsi_g(Op%Basis%tab_Smolyak(I_smol)%nq))
-
-         DO n = 1,Op%Basis%tab_Smolyak(I_smol)%nb
-           I_compt = Op%Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-           Op%Op_smol(I_smol)%Vb(n) = Psi_b(I_compt)
-         END DO
-
-         Call BasisTOGrid_Basis_rapide1(Op%Op_smol(I_smol)%Vg,Op%Op_smol(I_smol)%Vb, Op%Basis%tab_Smolyak(I_smol))
-
-         Call OpPsi_grid(OpPsi_g,Op%Op_smol(I_smol)%Vg,Op%Op_smol(I_smol))
-
-         Call GridTOBasis_Basis_rapide1(Op%Op_smol(I_smol)%Vb,OpPsi_g, Op%Basis%tab_Smolyak(I_smol))
-
-         Deallocate(OpPsi_g)
-        END DO
-
-         Op%RMat(:,ib) = ZERO
-
-         DO I_smol = 1,Op%Basis%NDindexl%Nterm
-           DO n = 1,Op%Basis%tab_Smolyak(I_smol)%nb
-             I_compt = Op%Basis%Tab_Smolyak(I_smol)%Ind_map(n)
-             Op%RMat(I_compt,ib) = Op%RMat(I_compt,ib) + Op%Basis%Smolyak%DSmol(I_smol)*Op%Op_smol(I_smol)%Vb(n)
-           END DO
-         END DO
-      END DO
-    CASE default
-      STOP 'ERROR in Read_Basis: no default basis.'
-    END SELECT
-  IF (debug) THEN
-    Write(out_unitp,*) 'END Make_Mat_OP'
-    flush(out_unitp)
-  END IF
- END SUBROUTINE Make_Mat_OP_gen
-
-
- SUBROUTINE Diago_Op(Op)
-  USE Molec_m
-  USE Basis_m
-   TYPE(Op_t),     intent(inout)       :: Op
-   !Logical,          parameter         :: debug = .true.
-   Logical,         parameter          :: debug = .false.
-   Integer                             :: jb,inb,ndim
-   Integer                             :: ib,iq,L
-   Logical                             :: Endloop_q
-   Integer,        allocatable         :: tab_iq(:),NDinit(:),NDend(:)
-   Real (kind=Rk), allocatable         :: EigenVal(:), EigenVec(:,:), Psi_g(:), DifEigen(:)
-   Real (kind=Rk), allocatable         :: Qmoy(:), Rho_r(:,:), omega(:)
-   Real (kind=Rk)                      :: W,Wr
-
-   IF (debug) THEN
-     Write(out_unitp,*) 'BEGINNING Diago_Op'
-     flush(out_unitp)
-   END IF
-
-   Allocate(DifEigen(Op%Basis%nb))
-   !Allocate(omega(Op%Basis%nb))
-   Allocate(EigenVal(Op%Basis%nb))
-   Allocate(EigenVec(Op%Basis%nb,Op%Basis%nb))
-   !Call Diago_Arpack(psi,Ene,nb_diago,max_diago,max_it,para_H)
-   !Call Diago_Arpack(EigenVec,EigenVal,Op%Basis%nb,Op%Basis%nb,Op%Basis%nb,Op%RMat)
-   Call  diagonalization(Op%RMat,EigenVal,EigenVec,Op%Basis%nb)
-   Write(out_unitp,*)
-   Write(out_unitp,*)
-   Write(out_unitp,*) 'eigenvalues = '
-   Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
-   DO ib=1,5!Op%Basis%nb
-     DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
-     Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
-   END DO
-
-   Write(out_unitp,*)
-   Write(out_unitp,*)
-
-   IF (debug) THEN
-    Allocate(Psi_g(Op%Basis%nq))
-    Call BasisTOGrid_Basis(Psi_g, EigenVec(:,1),Op%Basis)
-
-    Allocate(Rho_r(Op%Basis%nq,size(Op%Basis%tab_basis)))
-    Allocate(Qmoy(size(Op%Basis%tab_basis)))
-    Allocate(Tab_iq(size(Op%Basis%tab_basis)))
-    Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
-    Qmoy(:)=ZERO
-    Iq=0
-    DO
-     Iq=Iq+1
-     Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
-     IF (Endloop_q) exit
-     W=1
-     Do inb=1,size(Op%Basis%tab_basis)
-      W =  W * Op%Basis%tab_basis(inb)%W(tab_iq(inb))
-     END DO
-     W =  W*Psi_g(Iq)**2
-     DO inb=1,size(Op%Basis%tab_basis)
-      Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb))*W
-      Rho_r(iq,inb)=  W /Op%Basis%tab_basis(inb)%W(tab_iq(inb))
-     END DO
-    END DO
-    DO inb = 1,size(Op%Basis%tab_basis)
-     Write(out_unitp,*)'Qmoy(inb)',Qmoy(inb)
-    END DO
-    Open(1,file='Rho_r.dat',status='replace')
-    DO iq = 1,Op%Basis%nq,20
-     Write(1,*)iq, (Rho_r(iq,jb),jb=1,size(Op%Basis%tab_basis))
-    END DO
-    Close(1)
-    Deallocate(Rho_r)
-    Deallocate(Qmoy)
-    Deallocate(tab_iq)
-  END  IF
-   Deallocate(EigenVal)
-   Deallocate(EigenVec)
-
-   IF (debug) THEN
-     Write(out_unitp,*) 'END Diago_Op'
-     flush(out_unitp)
-   END IF
- END SUBROUTINE Diago_Op
-
- SUBROUTINE Potential(Op)
-  USE Basis_m
-  USE Molec_m
-   Logical,          parameter         :: debug = .true.
-   !Logical,         parameter          :: debug = .false.
-   Logical                             :: Endloop_q
-   Integer ,allocatable                :: tab_iq(:)
-   Integer                             :: iq,inb
-   Real (kind=Rk), allocatable         :: Q(:)
-   TYPE(Op_t),  intent(inout)          :: Op
-   Real (kind=Rk)                      :: V
-
-   IF (debug) THEN
-     Write(out_unitp,*) 'BEGINNING Potential '
-     Call Write_basis(Op%Basis)
-     flush(out_unitp)
-   END IF
-
-   IF (.NOT. Basis_IS_Allocated(Op%Basis)) THEN
+    IF (.NOT. Basis_IS_Allocated(Op%Basis)) THEN
      Write(out_unitp,*) ' ERROR in Potential'
      Write(out_unitp,*) " the basis is not Allocated."
      STOP "ERROR  Potential: the basis is not Allocated1."
-   END IF
+    END IF
 
-   IF(Allocated(Op%Basis%tab_basis)) THEN
+    IF(Allocated(Op%Basis%tab_basis)) THEN
      Allocate(Tab_iq(size(Op%Basis%tab_basis)))
      Allocate(Q(size(Op%Basis%tab_basis)))
      Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
@@ -559,92 +473,92 @@ CONTAINS
      END DO
      Deallocate(Tab_iq)
      Deallocate(Q)
-   ELSE
+    ELSE
      Allocate( Q(1))
      DO iq=1,Op%Basis%nq
        Q = Op%Basis%x(iq)
        Call Calc_potsub(V,Q,Op%Molec)
        Op%Scalar_g(iq)= V
      END DO
-   END IF
-   IF (debug) THEN
+    END IF
+    IF (debug) THEN
      Write(out_unitp,*) 'END Potential'
      flush(out_unitp)
-   END IF
- END SUBROUTINE Potential
+    END IF
+  END SUBROUTINE Potential
 
- SUBROUTINE KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)
-  USE Basis_m
-  USE Molec_m
-  USE UtilLib_m
-   TYPE(Op_t),     intent(in),target   :: Op
-   Real (kind=Rk), intent(in)          :: Psi_g(:)
-   Real (kind=Rk), intent(inout),target:: OpPsi_g(:)
-   Integer,        intent(in)          :: iterm
-   !Logical,          parameter         :: debug = .true.
-   Logical,         parameter          :: debug = .false.
+  SUBROUTINE KEO00Psi_grid(OpPsi_g,Psi_g,Op,iterm)
+   USE Basis_m
+   USE Molec_m
+   USE UtilLib_m
+    TYPE(Op_t),     intent(in),target   :: Op
+    Real (kind=Rk), intent(in)          :: Psi_g(:)
+    Real (kind=Rk), intent(inout),target:: OpPsi_g(:)
+    Integer,        intent(in)          :: iterm
+    !Logical,          parameter         :: debug = .true.
+    Logical,         parameter          :: debug = .false.
 
-   IF (debug) THEN
+    IF (debug) THEN
      Write(out_unitp,*) 'BEGINNING  KEO00Psi_grid'
      Call Write_op(op)
      Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
      flush(out_unitp)
-   END IF
+    END IF
     OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)* Psi_g(:)
-   IF (debug) THEN
+    IF (debug) THEN
      Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
      Write(out_unitp,*) 'END  KEO00Psi_grid'
      flush(out_unitp)
-   END IF
- END SUBROUTINE KEO00Psi_grid
+    END IF
+  END SUBROUTINE KEO00Psi_grid
 
 
- SUBROUTINE KEOiPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq)
-  USE Basis_m
-  USE Molec_m
-  USE UtilLib_m
-   TYPE(Op_t),     intent(in),target   :: Op
-   Real (kind=Rk), intent(in) ,target  :: Psi_g(:)
-   Real (kind=Rk), intent(inout),target:: OpPsi_g(:)
-   Integer,        intent(in)          :: inq,iterm
-   Real (kind=Rk), pointer             :: Psi_ggg(:,:,:)
-   Real (kind=Rk), pointer             :: d2gg(:,:)
-   Real (kind=Rk), pointer             :: d1gg(:,:)
-   Real (kind=Rk), pointer             :: KEO1psi_g(:)
-   Real (kind=Rk), pointer             :: OpPsi_ggg(:,:,:)
-   !Logical,          parameter         :: debug = .true.
-   Logical,         parameter          :: debug = .false.
-   Integer                             :: iq,i1,i3
-   Integer                             :: Iq1,Iq2,Iq3
+  SUBROUTINE KEOiPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq)
+   USE Basis_m
+   USE Molec_m
+   USE UtilLib_m
+    TYPE(Op_t),     intent(in),target   :: Op
+    Real (kind=Rk), intent(in) ,target  :: Psi_g(:)
+    Real (kind=Rk), intent(inout),target:: OpPsi_g(:)
+    Integer,        intent(in)          :: inq,iterm
+    Real (kind=Rk), pointer             :: Psi_ggg(:,:,:)
+    Real (kind=Rk), pointer             :: d2gg(:,:)
+    Real (kind=Rk), pointer             :: d1gg(:,:)
+    Real (kind=Rk), pointer             :: KEO1psi_g(:)
+    Real (kind=Rk), pointer             :: OpPsi_ggg(:,:,:)
+    !Logical,          parameter         :: debug = .true.
+    Logical,         parameter          :: debug = .false.
+    Integer                             :: iq,i1,i3
+    Integer                             :: Iq1,Iq2,Iq3
 
-   IF (debug) THEN
+    IF (debug) THEN
      Write(out_unitp,*) 'BEGINNING KEOiPsi_grid'
      Call Write_op(op)
      Call Write_RVec(Psi_g,out_unitp,5,name_info='Psi_g')
      flush(out_unitp)
-   END IF
-   Allocate(KEO1psi_g(Op%Basis%nq))
- !!!!1) Action de d/dQi : k1_psi = d/dQi psi
-   Iq1 = Product(Op%Basis%tab_basis(1:inq-1)%nq)
-   Iq2 = Op%Basis%tab_basis(inq)%nq
-   Iq3 = Product(Op%Basis%tab_basis(size(Op%Basis%tab_basis):inq+1:-1)%nq)
-   OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO1Psi_g
-   Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
-   d1gg(1:Op%Basis%tab_basis(inq)%nq,1:Op%Basis%tab_basis(inq)%nq)=>Op%Basis%tab_basis(inq)%d1gg
-   DO i3 = 1,ubound(Psi_ggg,dim=3)
-   DO i1 = 1,ubound(Psi_ggg,dim=1)
-     OpPsi_ggg(i1,:,i3) =  matmul(d1gg,Psi_ggg(i1,:,i3))
-   END DO
-   END DO
+    END IF
+    Allocate(KEO1psi_g(Op%Basis%nq))
+ !!! !1) Action de d/dQi : k1_psi = d/dQi psi
+    Iq1 = Product(Op%Basis%tab_basis(1:inq-1)%nq)
+    Iq2 = Op%Basis%tab_basis(inq)%nq
+    Iq3 = Product(Op%Basis%tab_basis(size(Op%Basis%tab_basis):inq+1:-1)%nq)
+    OpPsi_ggg(1:Iq1,1:Iq2,1:iq3)=> KEO1Psi_g
+    Psi_ggg(1:Iq1,1:Iq2,1:iq3)  => Psi_g
+    d1gg(1:Op%Basis%tab_basis(inq)%nq,1:Op%Basis%tab_basis(inq)%nq)=>Op%Basis%tab_basis(inq)%d1gg
+    DO i3 = 1,ubound(Psi_ggg,dim=3)
+    DO i1 = 1,ubound(Psi_ggg,dim=1)
+      OpPsi_ggg(i1,:,i3) =  matmul(d1gg,Psi_ggg(i1,:,i3))
+    END DO
+    END DO
  !3) action de f1^j(Q) :  kpsi = f1^j(Q) * k1_psi
-   OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)* KEO1Psi_g(:)
-   Deallocate(KEO1psi_g)
-   IF (debug) THEN
+    OpPsi_g(:) = OpPsi_g(:) +  Op%Grid(iterm)%Vec(:)* KEO1Psi_g(:)
+    Deallocate(KEO1psi_g)
+    IF (debug) THEN
      Call Write_RVec(OpPsi_g,out_unitp,5,name_info='OpPsi_g')
      Write(out_unitp,*) 'END KEOiPsi_grid'
      flush(out_unitp)
-   END IF
- END SUBROUTINE KEOiPsi_grid
+    END IF
+  END SUBROUTINE KEOiPsi_grid
 
  SUBROUTINE KEOijPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1,inq2)
   USE Basis_m
