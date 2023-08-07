@@ -309,7 +309,7 @@ CONTAINS
        IF (Endloop_q) exit
 
        DO inb = 1,size(Op%Basis%tab_basis)
-         Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb))
+         Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb),1)
        END DO
        Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
        Call Calc_potsub(V,Q,Op%Molec)
@@ -406,7 +406,7 @@ CONTAINS
       END DO
       W =  W*Psi_g(Iq)**2
       DO inb=1,size(Op%Basis%tab_basis)
-       Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb))*W
+       Qmoy(inb) = Qmoy(inb) + Op%Basis%tab_basis(inb)%x(tab_iq(inb),1)*W
        Rho_r(iq,inb)=  W /Op%Basis%tab_basis(inb)%W(tab_iq(inb))
       END DO
      END DO
@@ -435,7 +435,7 @@ CONTAINS
    USE Basis_m
    USE Molec_m
     Logical,          parameter         :: debug = .true.
-    !Logical,         parameter          :: debug = .false.
+    !Logical,         parameter         :: debug = .false.
     Logical                             :: Endloop_q
     Integer ,allocatable                :: tab_iq(:)
     Integer                             :: iq,inb
@@ -465,7 +465,7 @@ CONTAINS
       Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
       IF (Endloop_q) exit
       DO inb = 1, size(Op%Basis%tab_basis)
-        Q(inb) = Op%Basis%tab_basis(inb)%x(tab_iq(inb))
+        Q(inb) = Op%Basis%tab_basis(inb)%x(tab_iq(inb),1)
       END DO
       Call Calc_potsub(V,Q,Op%Molec)
       Op%Scalar_g(iq)= V
@@ -476,7 +476,7 @@ CONTAINS
     ELSE
      Allocate( Q(1))
      DO iq=1,Op%Basis%nq
-       Q = Op%Basis%x(iq)
+       Q = Op%Basis%x(iq,1)
        Call Calc_potsub(V,Q,Op%Molec)
        Op%Scalar_g(iq)= V
      END DO

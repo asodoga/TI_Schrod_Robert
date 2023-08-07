@@ -46,21 +46,20 @@ MODULE Basis_m
 
 
   TYPE :: NDSmolyak_t
-    Integer, allocatable          :: DSmol(:)
+    Integer, allocatable         :: DSmol(:)
   END TYPE NDSmolyak_t
 
   TYPE :: Basis_t
     Integer                      :: nb_basis   = 0
     Integer                      :: nb         = 0
     Integer                      :: nq         = 0
+    Integer                      :: ndim       = 1
     Integer                      :: A_smol, B_smol
     Integer, allocatable         :: Tags1(:)
     Integer, allocatable         :: Ind_map(:)
     Real(kind=Rk)                :: A,B,scaleQ,Q0
     Character(len=:),allocatable :: Basis_name
-    Real(kind=Rk),   allocatable :: Vg(:)
-    Real(kind=Rk),   allocatable :: Vb(:)
-    Real(kind=Rk),   allocatable :: x(:)
+    Real(kind=Rk),   allocatable :: x(:,:)
     Real(kind=Rk),   allocatable :: w(:)
     Real(kind=Rk),   allocatable :: d0gb(:,:)      ! basis s d0gb(nq,nb)
     Real(kind=Rk),   allocatable :: d1gb(:,:,:)    ! basis s d2gb(nq,nb,1)
@@ -136,13 +135,13 @@ CONTAINS
      IF (.NOT.Allocated(Basis%x)) THEN
       write(out_unitp,*)' Basis table x is not Allocated.'
      ELSE
-       Call Write_RVec(Basis%x,out_unitp,5,name_info='x')
+       Call Write_RVec(Basis%x(:,1),out_unitp,5,name_info='x')
      END IF
      write(out_unitp,*)
      IF (.NOT.Allocated(Basis%W)) THEN
        write(out_unitp,*)' Basis table w is not Allocated.'
      ELSE
-       Call Write_RVec(Basis%w,out_unitp,5,name_info='w')
+       Call Write_RVec(Basis%w(:),out_unitp,5,name_info='w')
      END IF
      write(out_unitp,*)
      IF (.NOT.Allocated(Basis%d0gb)) THEN
@@ -223,14 +222,16 @@ CONTAINS
 
      Call string_uppercase_TO_lowercase(Basis%Basis_name)
      SELECT CASE (Basis%Basis_name)
-     CASE ('boxab')
-     Call Construct_Basis_Sin(Basis)
-     Basis%Q0      = Basis%A
-     Basis%scaleQ  = pi/(Basis%B-Basis%A)
-     CASE ('herm','ho')
-     Call Construct_Basis_Ho(Basis)
-     CASE default
-     STOP 'ERROR in Read_Basis: no default basis.'
+      CASE ('boxab')
+       Call Construct_Basis_Sin(Basis)
+       Basis%Q0      = Basis%A
+       Basis%scaleQ  = pi/(Basis%B-Basis%A)
+      CASE ('herm','ho')
+       Call Construct_Basis_Ho(Basis)
+      CASE ('four')
+       Call Construct_Basis_Fourier(Basis)
+      CASE default
+       STOP 'ERROR in Read_Basis: no default basis.'
      END SELECT
 
      Call Scale_Basis(Basis)
@@ -384,7 +385,7 @@ CONTAINS
       Deallocate(Tags)
       IF (Endloop) exit
     END DO
-  !  Basis%NB = compt
+
     Basis%NB = compt
     Allocate(Tab_ind(Basis%NDindexl%NDim))
 
@@ -444,6 +445,7 @@ CONTAINS
 
   SUBROUTINE Read_Construct_Basis(Basis,nio)
    USE UtilLib_m
+   IMPLICIT NONE
     Logical,             parameter      :: debug = .true.
    !Logical,             parameter       :: debug = .false.
     TYPE(Basis_t),       intent(inout)  :: Basis
@@ -634,6 +636,7 @@ CONTAINS
 
 
  SUBROUTINE Weight_D_smol ( D,L,Som_l,NDIM)
+  IMPLICIT NONE
   Integer,   intent(in)       :: NDIM
   Integer,   intent(in)       :: Som_l
   Integer,   intent(in)       :: L
@@ -646,6 +649,7 @@ CONTAINS
 
  RECURSIVE SUBROUTINE Read_Basis_old (Basis,nio)
  USE UtilLib_m
+ IMPLICIT NONE
    Logical,             parameter      :: debug = .true.
   !Logical,             parameter       ::debug = .false.
    TYPE(Basis_t),       intent(inout)  :: Basis
@@ -741,6 +745,7 @@ CONTAINS
 
  SUBROUTINE Construct_Basis_Sin(Basis) ! sin : boxAB with A=0 and B=pi
  USE UtilLib_m
+ IMPLICIT NONE
    TYPE(Basis_t),       intent(inout)  :: Basis
    Real(kind=Rk)                       :: dx
    Integer                             :: ib,iq,nb,nq
@@ -748,17 +753,20 @@ CONTAINS
    nb = Basis%nb
    nq = Basis%nq
    dx = pi/nq
-    ! grid and weight
-   Basis%x = [(dx*(iq-HALF),iq=1,nq)]
-   Basis%w = [(dx,iq=1,nq)]
-
+   Allocate(Basis%W(nq))
+   Allocate(Basis%x(nq,1))
    Allocate(Basis%d0gb(nq,nb))
    Allocate(Basis%d1gb(nq,nb,1))
    Allocate(Basis%d2gb(nq,nb,1,1))
 
+   Basis%x(:,1) = [(dx*(iq-HALF),iq=1,nq)]
+   Basis%w(:) = [(dx,iq=1,nq)]
+
+
+
    DO ib=1,nb
-     Basis%d0gb(:,ib)     =          sin(Basis%x(:)*ib) / sqrt(pi*HALF)
-     Basis%d1gb(:,ib,1)   =  ib    * cos(Basis%x(:)*ib) / sqrt(pi*HALF)
+     Basis%d0gb(:,ib)     =          sin(Basis%x(:,1)*ib) / sqrt(pi*HALF)
+     Basis%d1gb(:,ib,1)   =  ib    * cos(Basis%x(:,1)*ib) / sqrt(pi*HALF)
      Basis%d2gb(:,ib,1,1) = -ib**2 * Basis%d0gb(:,ib)
    END DO
 
@@ -769,15 +777,304 @@ CONTAINS
    END IF
  END SUBROUTINE Construct_Basis_Sin
 
+ SUBROUTINE Construct_Basis_Fourier(Basis)
+  USE UtilLib_m
+  IMPLICIT NONE
+   TYPE(Basis_t),  intent(inout)  :: Basis
+   Real(kind=Rk)                  :: dx
+   Integer                        :: ib,iq,nb,nq,K
+
+   nb = Basis%nb
+   nq = Basis%nq
+   dx = TWO*PI/nq
+   Allocate(Basis%W(nq))
+   Allocate(Basis%x(nq,1))
+   Allocate(Basis%d0gb(nq,nb))
+   Allocate(Basis%d1gb(nq,nb,1))
+   Allocate(Basis%d2gb(nq,nb,1,1))
+
+   Basis%x(:,1) = [(dx*iq-dx/2 , iq = 1,nq)]
+   Basis%w(:)   = [(dx,iq = 1,nq)]
+
+
+
+   DO ib = 1, nb
+    K= int(ib/2)
+    IF (ib == 1) THEN
+      Basis%d0gb(:, ib)        =  ONE/sqrt(TWO*PI)
+      Basis%d1gb(:, ib, 1)     =  ZERO
+      Basis%d2gb(:, ib, 1, 1)  =  ZERO
+    ELSE IF (modulo(ib, 2) == 0) THEN
+      Basis%d0gb(:, ib)        =  sin(Basis%x(:,1)*K)/sqrt(PI)
+      Basis%d1gb(:, ib, 1)     =  K*cos(Basis%x(:,1)*K)/sqrt(PI)
+      Basis%d2gb(:, ib, 1, 1)  = -K**2*Basis%d0gb(:, ib)
+    ELSE
+      Basis%d0gb(:, ib)        =  cos(Basis%x(:,1)*K)/sqrt(PI)
+      Basis%d1gb(:, ib, 1)     = -K*sin(Basis%x(:,1)*K)/sqrt(PI)
+      Basis%d2gb(:, ib, 1, 1)  = -K**2*Basis%d0gb(:, ib)
+    END IF
+   END DO
+
+   IF (nb == nq .and. modulo(Basis%nb,2) == 0) THEN
+     Basis%d0gb(:,nb)          =  Basis%d0gb(:,nb)      / sqrt(TWO)
+     Basis%d1gb(:,nb,:)        =  Basis%d1gb(:,nb,:)    / sqrt(TWO)
+     Basis%d2gb(:,nb,:,:)      =  Basis%d2gb(:,nb,:,:)  / sqrt(TWO)
+   END IF
+
+ END SUBROUTINE Construct_Basis_Fourier
+
+ SUBROUTINE gauleg(x1,x2,x,w,n)
+  USE UtilLib_m
+  IMPLICIT NONE
+   Integer                    :: n,m,i,j
+   Real(kind=Rk)              :: x1,x2
+   Real(kind=Rk)              :: xm,xl,z,z1,p1,p2,p3,pp
+   Real(kind=Rk), allocatable :: x(:),w(:)
+
+   m = (n+1)/2
+
+   xm = HALF*(x2+x1)
+   xl = HALF*(x2-x1)
+
+   DO i=1,m
+   z = cos(pi*(i-0.25d0)/(Half+n))
+
+    DO
+     p1 = One
+     p2 = Zero
+     DO j=1,n
+      p3 = p2
+      p2 = p1
+      p1 = ((TWO*j-One)*z*p2 - (j-One)*p3)/j
+     END DO
+     pp = n*(z*p1-p2)/(z*z-One)
+     z1 = z
+     z  = z1-p1/pp
+     IF (abs(z-z1) .GT. One**(-14)) exit
+    END DO
+
+    Allocate(x(n))
+    Allocate(w(n))
+
+    x(i) = xm-xl*z
+    x(n+1-i) = xm+xl*z
+    w(i) = Two*xl/((One-z*z)*pp*pp)
+    w(n+1-i) = w(i)
+   END DO
+ END SUBROUTINE gauleg
+
+ FUNCTION poly_legendre(x,lll,mmm)
+
+  Real(kind=Rk)   :: poly_legendre,X
+  Real(kind=Rk)   :: pmm,somx2,fact,pmmp1,pll,poly,norme2
+  Integer         :: l,ll,lll,m,mmm,i
+
+   l = lll-1
+   m = mmm
+
+   IF (m .LT. 0 .OR. l .LT. 0 .OR. abs(x) .GT.One) THEN
+     write(out_unitp,*) 'mauvais arguments dans poly_legendre :'
+     write(out_unitp,*) ' m l : ',m,l,' et x = ',x
+     STOP
+   END IF
+
+   IF (m .GT. l) THEN
+     poly_legendre = Zero
+     RETURN
+   END IF
+
+   pmm = One
+
+   IF (m .GT. 0) THEN
+     somx2 = sqrt(One - x*x)
+     fact = One
+     DO i=1,m
+       pmm  = -pmm*fact*somx2
+       fact =  fact+Two
+     END DO
+   END IF
+
+   IF ( m .EQ. l) THEN
+     poly = pmm
+   ELSE
+     pmmp1 = x*(2*m+1)*pmm
+     IF (l .EQ. m+1) THEN
+       poly = pmmp1
+     ELSE
+       DO ll=m+2,l
+
+         pll = (x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
+         pmm = pmmp1
+         pmmp1 = pll
+       END DO
+       poly = pll
+     END IF
+   END IF
+
+!      nomalisation de Pl,0(x)
+   norme2 = TWO/(TWO*l+1)
+   DO i=l-m+1,l+m
+     norme2 = norme2 * dble(i)
+   END DO
+   poly_legendre = poly/sqrt(norme2)
+
+ END FUNCTION poly_legendre
+
+ FUNCTION d1poly_legendre(x,lll)
+
+  Real(kind=Rk) ::    x
+  Real(kind=Rk) ::    poly_legendre, d1poly_legendre
+  Integer       ::    l,lll
+
+    l=lll-1
+    IF (l .EQ. 0) THEN
+      d1poly_legendre = ZERO
+    ELSE
+      d1poly_legendre = l/(x*x-ONE) * (x*poly_legendre(x,lll,0) &
+      -sqrt((TWO*l+ONE)/(TWO*l-ONE))*poly_legendre(x,lll-1,0) )
+    END IF
+  END FUNCTION d1poly_legendre
+
+  SUBROUTINE d0d1d2d3poly_legendre(x,lll,d0,d1,d2,d3,nderiv)
+   USE UtilLib_m
+   IMPLICIT NONE
+    Real(kind=Rk)    ::    x
+    Real(kind=Rk)    ::    poly_legendre
+    Real(kind=Rk)    ::    d0,d1,d2,d01,d3
+    Integer          ::    l,lll,nderiv
+
+    l = lll-1
+
+    D0 = poly_legendre(x,lll,0)
+
+    IF (l .EQ. 0) THEN
+      d1 = ZERO
+      d2 = ZERO
+      d3 = ZERO
+    ELSE
+      d01 = poly_legendre(x,lll-1,0)
+      d1 = l/(x*x-ONE) * (x*d0 - sqrt((TWO*l+ONE)/(TWO*l-ONE))*d01 )
+      d2 = (-d0*l*(l+1)+TWO*x*d1)/(ONE-x*x)
+      d3 = (d1 * (TWO-l*(l+1)) + d2 * FOUR*x )/  (ONE-x*x)
+    END IF
+  END SUBROUTINE d0d1d2d3poly_legendre
+
+  SUBROUTINE d0d1d2poly_legendre(x,lll,d0,d1,d2,num,step)
+   USE UtilLib_m
+   IMPLICIT NONE
+    Real(kind=Rk)    :: x
+    Real(kind=Rk)    :: poly_legendre
+    Real(kind=Rk)    :: ep,em,step,d0,d1,d2,d01
+    Logical          :: num
+    Integer          :: l,lll
+
+
+    l=lll-1
+    d0 = poly_legendre(x,lll,0)
+
+    IF (l .EQ. 0) THEN
+      d1 = ZERO
+      d2 = ZERO
+    ELSE
+     IF (num) THEN
+      ep = poly_legendre(x+step,lll,0)
+      em = poly_legendre(x-step,lll,0)
+      CALL d1d2_b(d0,ep,em,d1,d2,step)
+     ELSE
+      d01 = poly_legendre(x,lll-1,0)
+      d1  = l/(x*x-TWO) * (x*d0 - sqrt((TWO*l+ONE)/(TWO*l-ONE))*d01 )
+
+      d2 = (-d0*l*(l+1)+TWO*x*d1)/(ONE-x*x)
+     END IF
+    END IF
+
+  END SUBROUTINE d0d1d2poly_legendre
+
+  SUBROUTINE d0Ylm(d0,x,i,ndim)
+   USE UtilLib_m
+   IMPLICIT NONE
+    Integer                    :: i,ndim
+    Integer                    :: l,m,lll,mmm
+    Real(kind=Rk)              :: th,phi
+    Real(kind=Rk)              :: d0,x(2)
+    Real(kind=Rk)              :: Ylm,poly_legendre,fourier
+
+      IF (ndim .NE. 2) THEN
+        write(6,*) ' ERROR in d0Ylm'
+        write(6,*) ' ndim MUST set to 2 (ndim=',ndim,')'
+        STOP
+      END IF
+      th=x(1)
+      phi=x(2)
+
+      l   = int(sqrt(dble(i)-Half))
+      lll = l+1
+      mmm = i-l*l
+      m   = mmm/2
+
+      d0 = Ylm(th,phi,lll,mmm)
+      d0 = poly_legendre(cos(th),lll,m)*fourier(phi,mmm)
+
+ END SUBROUTINE d0Ylm
+
+ FUNCTION Ylm(th,phi,lll,mmm)
+   USE UtilLib_m
+   IMPLICIT NONE
+    Integer           :: lll,mmm
+    Integer           :: l,m
+    Real(kind=Rk)     :: th,phi,Ylm
+    Real(kind=Rk)     :: sq2pi,sqpi
+    Real(kind=Rk)     :: poly_legendre,v26,v27,v28,fourier
+
+     l=lll
+     m = mmm/2
+     IF ( m .GT. l .OR. l .LT. 0 .OR.  th .GT. PI .OR. th .LT. zero) THEN
+        write(6,*) 'mauvais arguments dans Ylm :'
+        write(6,*) ' m l : ',m,l,' et th = ',th
+        write(6,*) ' mmm lll : ',mmm,lll
+        STOP
+     END IF
+     Ylm = poly_legendre(cos(th),lll,m)*fourier(phi,mmm)
+ END FUNCTION Ylm
+
+
+
+
+ SUBROUTINE d0d1d2Plm_grid(xl,d0l,d1l,d2l,nb_legendre,nb_quadra,deriv,num,step)
+   USE UtilLib_m
+   IMPLICIT NONE
+    Integer ,intent(in)       :: nb_legendre,nb_quadra
+    Integer                   :: i,k
+    Real(kind=Rk)             :: step
+    Real(kind=Rk),allocatable :: xl(:)
+    Real(kind=Rk),allocatable :: d0l(:,:)
+    Real(kind=Rk),allocatable :: d1l(:,:)
+    Real(kind=Rk),allocatable :: d2l(:,:)
+    Logical                   :: num,deriv
+
+    Allocate(xl(nb_quadra))
+    Allocate(d0l(nb_quadra,nb_legendre))
+    Allocate(d1l(nb_quadra,nb_legendre))
+    Allocate(d2l(nb_quadra,nb_legendre))
+
+    DO k=1,nb_quadra
+     DO i=1,nb_legendre
+      CALL d0d1d2poly_legendre(xl(k),i, d0l(k,i),d1l(k,i),d2l(k,i),num,step)
+     END DO
+    END DO
+
+ END SUBROUTINE d0d1d2Plm_grid
+
  SUBROUTINE Construct_Basis_Ho(Basis) ! HO :
  USE UtilLib_m
-  TYPE(Basis_t),       intent(inout)  :: Basis
-  Integer                :: iq,ib
+  TYPE(Basis_t), intent(inout)  :: Basis
+  Integer                       :: iq,ib
 
-  Allocate(Basis%x(Basis%nq))
+!  Allocate(Basis%x(Basis%nq))
+  Allocate(Basis%x(Basis%nq,1))
   Allocate(Basis%w(Basis%nq))
 
-  Call hercom(Basis%nq, Basis%x(:), Basis%w(:))
+  Call hercom(Basis%nq, Basis%x(:,1), Basis%w(:))
 
   Allocate(Basis%d0gb(Basis%nq,Basis%nb))
   Allocate(Basis%d1gb(Basis%nq,Basis%nb,1))
@@ -785,19 +1082,18 @@ CONTAINS
 
   DO iq = 1, Basis%nq
     DO ib = 1, Basis%nb
-      Call Construct_Basis_poly_Hermite_exp(Basis%x(iq),Basis%d0gb(iq,ib),&
+      Call Construct_Basis_poly_Hermite_exp(Basis%x(iq,1),Basis%d0gb(iq,ib),&
       Basis%d1gb(iq,ib,1),Basis%d2gb(iq,ib,1,1), ib-1,.TRUE.)
-
     END DO
-
   END DO
  END SUBROUTINE Construct_Basis_Ho
 
  FUNCTION poly_Hermite(x,l)
   Implicit none
-   Real(kind = Rk):: poly_Hermite
-   Real(kind = Rk):: pl0,pl1,pl2,norme,x
-   Integer        :: i,l
+   Integer          :: i,l
+   Real(kind = Rk)  :: poly_Hermite
+   Real(kind = Rk)  :: pl0,pl1,pl2,norme,x
+
 
    IF ( l .LT. 0 ) THEN
     Write(out_unitp,*) 'Bad arguments in poly_hermite :'
@@ -842,7 +1138,7 @@ CONTAINS
 
  SUBROUTINE herrec ( p2, dp2, p1, x, nq )
   Implicit none
-  Integer        ::i
+  Integer        :: i
   Integer        :: nq
   Real(kind = Rk):: dp0,dp1,dp2,p0,p1,p2,x
 
@@ -863,10 +1159,10 @@ CONTAINS
 
   SUBROUTINE herroot ( x, nq, dp2, p1 )
   Implicit none
-   Integer          :: i
-   Integer          :: nq
+   Integer                   :: i
+   Integer                   :: nq
    Real(kind = Rk),parameter :: eps = TEN**(-TWELVE) ! 1.0d-12
-   Real(kind = Rk)  :: d,dp2,p1,p2,x
+   Real(kind = Rk)           :: d,dp2,p1,p2,x
 
    DO i = 1, 10
      Call herrec ( p2, dp2, p1, x, nq )
@@ -880,13 +1176,13 @@ CONTAINS
 
  SUBROUTINE hercom (nq,xp,w)
  Implicit none
-   Integer        :: i,nq
-   Real(kind = Rk):: cc,dp2,p1,s,temp,x
-   Real(kind = Rk):: w(nq),xp(nq)
+   Integer         :: i,nq
+   Real(kind = Rk) :: cc,dp2,p1,s,temp,x
+   Real(kind = Rk) :: w(nq),xp(nq)
 
    CC = 1.7724538509_Rk * gamma_perso(nq ) / ( TWO**( nq-1) )
 
-   S = ( TWO * dble (Real(nq,Kind=Rk) ) + ONE )**( SIXTH )
+   S  = ( TWO * dble (Real(nq,Kind=Rk) ) + ONE )**( SIXTH )
 
    DO i = 1, ( nq + 1 ) / 2
      IF ( i .EQ. 1 ) THEN
@@ -902,7 +1198,7 @@ CONTAINS
      END IF
      Call herroot ( x,  nq, dp2, p1 )
      xp(i) = x
-     W(i) = cc / dp2 / p1
+     W(i)  = cc / dp2 / p1
      xp( nq-i+1) = - x
      w( nq-i+1) = w(i)
    END DO
@@ -998,7 +1294,7 @@ CONTAINS
   USE UtilLib_m
   USE NDindex_m
     !Logical,           parameter    :: debug = .true.
-    Logical,          parameter     :: debug = .false.
+    Logical,           parameter     :: debug = .false.
     TYPE(Basis_t),     intent(in)    :: Basis
     Real(kind=Rk),     intent(in)    :: B(:) !Vector on base,
     Real(kind=Rk),     intent(inout) :: G(:) !Vector on the grid, out
@@ -1085,10 +1381,9 @@ CONTAINS
    TYPE(Basis_t)    , intent(in),target     :: Basis
    Real (kind=Rk), intent(inout)            :: BB(:,:,:)
    Real (kind=Rk), intent(in)               :: GG(:,:,:)
-   real(kind=Rk), ALLOCATABLE   :: d0bgw(:,:)
+   real(kind=Rk), ALLOCATABLE               :: d0bgw(:,:)
    Logical          , parameter             :: debug = .true.
    Integer                                  :: i1,i3,ib
-
 
     IF (debug) THEN
       flush(out_unitp)
@@ -1438,7 +1733,7 @@ CONTAINS
         END DO
         B(ib) = B(ib) + W * WT * G(iq)
       END DO
-     END DO
+    END DO
      DeAllocate(Tab_ib)
      DeAllocate(Tab_iq)
     ELSE
@@ -1744,7 +2039,7 @@ USE UtilLib_m
     sx = Basis%scaleQ
     IF (abs(sx) > ONETENTH**6 .AND. Basis_IS_Allocated(Basis)) THEN
 
-      Basis%x(:) = x0 + Basis%x(:) / sx
+      Basis%x(:,1) = x0 + Basis%x(:,1) / sx
       Basis%w(:) =      Basis%w(:) / sx
 
       Basis%d0gb(:,:)     = Basis%d0gb(:,:)     * sqrt(sx)
