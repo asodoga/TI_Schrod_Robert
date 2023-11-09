@@ -54,7 +54,7 @@ MODULE Op_m
   END TYPE Op_t
 
   Public :: Op_t,Write_Op,Set_Op,dealloc_Op,calc_OpPsi,Diago_Op
-  Public :: OpPsi_gridnD,Grid_t,Make_mat
+  Public :: OpPsi_gridnD,Grid_t,Make_mat,Local_F2_F1_old
 
 CONTAINS
 
@@ -114,7 +114,9 @@ CONTAINS
     END IF
     Allocate(Psi_G(Op%Basis%nq))
     Allocate(OpPsi_G(Op%Basis%nq))
+
     CALL BasisTOGrid_Basis_rapide1(Psi_G,Psi_B,Op%Basis)
+
     CALL OpPsi_grid(OpPsi_G,Psi_G,Op)
     CALL GridTOBasis_Basis_rapide1( OpPsi_B,OpPsi_G,Op%Basis)
     Deallocate(Psi_G)
@@ -149,10 +151,10 @@ CONTAINS
 
      CALL OpPsi_basis_DP(OpPsi_B,Psi_B,Op%Op_Smol(I_smol))
 
-      DO n = 1,Op%Basis%tab_Smolyak(I_smol)%nb
+     DO n = 1,Op%Basis%tab_Smolyak(I_smol)%nb
         I_compt = Op%Basis%Tab_Smolyak(I_smol)%Ind_map(n)
         OpPsi_Bc(I_compt) = OpPsi_Bc(I_compt) + Op%Basis%Smolyak%DSmol(I_smol)*OpPsi_B(n)
-      END DO
+     END DO
 
 
      Deallocate(Psi_B)
@@ -197,6 +199,100 @@ CONTAINS
     Deallocate(Psi_B)
 
   END SUBROUTINE Make_mat
+
+  SUBROUTINE  Local_F2_F1_old(F2,F1,R,m1,m2,Ndim,Q)
+  USE NumParameters_m
+  USE UtilLib_m
+   IMPLICIT NONE
+   Integer, intent(in)           :: Ndim
+   Real (kind=Rk), intent(in)    :: Q(:)
+   Real (kind=Rk), intent(inout) :: F1(:)
+   Real (kind=Rk), intent(inout) :: F2(:,:)
+   Real (kind=Rk), intent(in)    :: R,m1,m2
+   Real (kind=Rk)                :: mr,mt
+   !Logical,          parameter   :: debug = .true.
+   Logical,         parameter   :: debug = .false.
+   Integer                       :: i,j
+
+   IF (debug) THEN
+    Write(out_unitp,*) 'BEGINNING Local_F2_F1_old'
+    flush(out_unitp)
+   END IF
+
+    !Write(*,*) Q
+    mt = m1+m2
+    mr = (m1*m2)/mt
+
+    F2 = Zero
+    F1 = Zero
+
+    DO i=1,Ndim-2
+      F2(i,i) = - HALF/mt ! F2 for x,y,z
+    END DO
+
+    F2(Ndim-1,Ndim-1) = -HALF/(mr*R**2) !F2 for theta
+!Write(*,*) (sin(Q(Ndim-1)))**2,Q(Ndim-1)
+    F2(Ndim,Ndim)     = -HALF/((mr*R**2)*(sin(Q(Ndim-1)))**2) ! f2 for phi
+!STOP 'RObert Aa'
+    F1(Ndim-1)        = -HALF/((mr*R*R*tan(Q(Ndim-1)))) !F1 for theta
+
+    IF (debug) THEN
+      Do i=1,Ndim
+       Write(out_unitp,*)'F2',F2(i,i)
+        Write(out_unitp,*)'F1',F1(i)
+      END DO
+
+     Write(out_unitp,*) 'END Local_F2_F1_old'
+     flush(out_unitp)
+    END IF
+  END SUBROUTINE Local_F2_F1_old
+
+  SUBROUTINE  Local_F2_F1_6D(F2,F1,R,m1,m2,Ndim,Q)
+  USE NumParameters_m
+  USE UtilLib_m
+   IMPLICIT NONE
+   Integer, intent(in)           :: Ndim
+   Real (kind=Rk), intent(in)    :: Q(:)
+   Real (kind=Rk), intent(inout) :: F1(:)
+   Real (kind=Rk), intent(inout) :: F2(:,:)
+   Real (kind=Rk), intent(in)    :: R,m1,m2
+   Real (kind=Rk)                :: mr,mt
+   Logical,          parameter   :: debug = .true.
+   !Logical,         parameter   :: debug = .false.
+   Integer                       :: i,j
+
+   IF (debug) THEN
+    Write(out_unitp,*) 'BEGINNING Local_F2_F1_6D'
+    flush(out_unitp)
+   END IF
+
+    mt = m1+m2
+    mr = (m1*m2)/mt
+
+    F2 = Zero
+    F1 = Zero
+
+    DO i=1,Ndim-3
+      F2(i,i) = - HALF/mt ! F2 for x,y,z
+    END DO
+
+    F2(Ndim-1,Ndim-1) = - HALF/(mr*Q(Ndim-2)**2) !F2 for theta
+
+    F2(Ndim,Ndim)     = - HALF/((mr*Q(Ndim-2)**2)*(sin(Q(Ndim-1)))**(2)) ! f2 for phi
+
+    F1(Ndim-1)        = - HALF/((mr*Q(Ndim-2)**2*tan(Q(Ndim-1)))) !F1 for theta
+
+    IF (debug) THEN
+      Do i=1,Ndim
+       Write(out_unitp,*)'F2',F2(i,i)
+        Write(out_unitp,*)'F1',F1(i)
+      END DO
+
+     Write(out_unitp,*) 'END Local_F2_F1_6D'
+     flush(out_unitp)
+    END IF
+  END SUBROUTINE Local_F2_F1_6D
+
 
   SUBROUTINE Set_Op(Op,Basis,Molec)
    USE Basis_m
@@ -256,12 +352,13 @@ CONTAINS
     TYPE (Molec_t), intent(in),  target :: Molec
     Real(kind=Rk)                       :: F,Vep,V
     Real(kind=Rk), allocatable          :: Q(:),F2(:,:),F1(:)
+    Real(kind=Rk)                       :: massCO(2)
     !Logical,          parameter         :: debug = .true.
     Logical, parameter                  :: debug = .false.
     Logical                             :: Endloop_q
     Logical                             :: Endloop_b
     Integer, allocatable                :: tab_iq(:)
-    Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm
+    Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm,ndim
     Integer                             :: inq1,inq2,I_smol
 
     IF (debug) THEN
@@ -296,7 +393,7 @@ CONTAINS
       DO i1=1,size(Op%Basis%tab_basis)
        iterm = iterm+1
        Op%Grid(iterm)%DerivIndex(:)  = [i1,0]
-       Write(out_unitp,*) iterm, Op%Grid(iterm)%DerivIndex(:)
+      ! Write(out_unitp,*) iterm, Op%Grid(iterm)%DerivIndex(:)
       END DO
       Allocate(Tab_iq(size(Op%Basis%tab_basis)))
 
@@ -305,14 +402,31 @@ CONTAINS
       Iq=0
       DO
        Iq=Iq+1
+
        Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
        IF (Endloop_q) exit
 
        DO inb = 1,size(Op%Basis%tab_basis)
          Q(inb) =  Op%Basis%tab_basis(inb)%x(tab_iq(inb),1)
        END DO
-       Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
+       SELECT CASE (Op%Molec%Model_type)
+       CASE('QML')
+         Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
+       CASE('RPotlib')
+
+         massCO(1)   =  12.0000000_Rk
+         massCO(2)   =  15.99491461957_Rk
+         Vep=Zero
+         Call Local_F2_F1_old(F2,F1,Op%Molec%Para_CO_nWater%ReCO,&
+         massCO(1),massCO(2),Op%Basis%NDindexq%Ndim,Q)
+
+       CASE DEFAULT
+         STOP 'Model_type is bad'
+       END SELECT
+
        Call Calc_potsub(V,Q,Op%Molec)
+!Write(*,*)size(Op%Grid)
+!stop 'CCC'
        DO iterm = 1,size(Op%Grid)
         inq1  = Op%Grid(iterm)%DerivIndex(1)
         inq2  = Op%Grid(iterm)%DerivIndex(2)
@@ -348,6 +462,7 @@ CONTAINS
     END IF
   END SUBROUTINE Set_grid_op
 
+
   SUBROUTINE Diago_Op(Op)
    USE Molec_m
    USE Basis_m
@@ -378,7 +493,7 @@ CONTAINS
     Write(out_unitp,*)
     Write(out_unitp,*) 'eigenvalues = '
     Write(out_unitp,*) 'n','EigenVal','E_n-E_1','omega'
-    DO ib=1,5!Op%Basis%nb
+    DO ib=1,21!Op%Basis%nb
      DifEigen(ib)=(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK-(EigenVal(1)-Op%Molec%V0)*219474.631443_RK
      Write(out_unitp,*) ib,(EigenVal(ib)-Op%Molec%V0)*219474.631443_RK,'DifEigen(ib)',DifEigen(ib)
     END DO
@@ -748,10 +863,10 @@ CONTAINS
      flush(out_unitp)
    END IF
 
-   OpPsi_g = ZERO
-   DO iterm=1,size(Op%Grid)
-     inq1 = Op%Grid(iterm)%DerivIndex(1)
-     inq2 = Op%Grid(iterm)%DerivIndex(2)
+   OpPsi_g  = ZERO
+   DO iterm = 1,size(Op%Grid)
+     inq1  = Op%Grid(iterm)%DerivIndex(1)
+     inq2  = Op%Grid(iterm)%DerivIndex(2)
      IF (inq1 > 0 .and. inq2 > 0 .and. inq1 /= inq2) THEN ! terme croisé
        Call KEOijPsi_grid(OpPsi_g,Psi_g,Op,iterm,inq1,inq2)
      ELSE IF (inq1 > 0 .and. inq2 > 0 .and. inq1 == inq2) THEN ! terme non croisé

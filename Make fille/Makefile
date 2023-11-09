@@ -7,7 +7,6 @@ SRC_DIR=src
 MAIN_DIR=app
 
 
-#QMLDIR=/home/elprof/QuantumModelLib
 QMLDIR=/home/robert/robert2/Librairie/QuantumModelLib
 AD_dnSVMDIR=/home/robert/robert2/Librairie/ARPACK_DML
 ARPACKDIR=/home/robert/robert2/Librairie/ElVibRot-TnumTana/obj/obj_gfortran
@@ -25,7 +24,7 @@ $(info ************ $(OBJ_DIR)/files: $(OBJ))
 
 
 $(MAIN).x: $(OBJ_DIR)/$(MAIN).o $(OBJ) $(EXT_LIB)
-	$(FC) $(FFLAGS) -o $(MAIN).x  $(OBJ_DIR)/$(MAIN).o $(OBJ) -lblas -llapack $(EXT_LIB)
+	$(FC) $(FFLAGS) -o $(MAIN).x  $(OBJ_DIR)/$(MAIN).o $(OBJ) -llapack -lblas  $(EXT_LIB)
 
 $(OBJ_DIR)/$(MAIN).o: $(MAIN_DIR)/$(MAIN).f90
 	$(FC) $(FFLAGS) -o $@ -c $<
