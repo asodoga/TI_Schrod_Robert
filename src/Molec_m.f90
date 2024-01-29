@@ -99,8 +99,10 @@ module Molec_m
     Read(ni,nml=pot,IOSTAT=err_io)
     SELECT CASE (Model_type)
     CASE('QML')
-      ndimQ     = 0
-      nsurf     = 0
+      ndimQ     = 0 !H2cl+
+      !ndimQ     = 5
+    !  nsurf     = 1
+      nsurf     = 0 ! H2cl+
       pot_name  = 'read_model'
       adiabatic = .FALSE.
       option    = 0
@@ -222,7 +224,7 @@ module Molec_m
     SELECT CASE (Molec%Model_type)
     CASE ('QML')
       ALLocate(Mat_V(1,1))
-      ALLocate(QQML(3))
+      ALLocate(QQML(Molec%ndim))
       SELECT CASE (Molec%sym_type)
       CASE ('ANTISYM')
         QQML(:)= [Q(3),HALF*(Q(1)+Q(2)),HALF*(Q(1)-Q(2))]

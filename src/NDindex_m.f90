@@ -195,6 +195,7 @@ CONTAINS
           Tab_ind(i)   = 1
        END IF
      END DO
+    ! Write(*,*) 'li=',Tab_ind(:)
      IF (debug) Write(out_unitp,*)'Tab_indfin', Tab_ind(NDindex%Ndim)
      Endloop = (Tab_ind(NDindex%Ndim) == NDindex%Ndend(NDindex%Ndim)+1)
     CASE default

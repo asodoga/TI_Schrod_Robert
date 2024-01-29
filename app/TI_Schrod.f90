@@ -77,11 +77,13 @@ PROGRAM TI_Schrod
 
   !CALL Read_Basis_old1(Basis,nio=in_unitp)
   Call Read_Construct_Basis(Basis,nio=in_unitp)
+  !Call Write_Basis(Basis)
   !Write(*,*) 'arrivé'
-  !STOP 'Robert'
+  !STOP 'Robert_construct'
   !!====================================================================================
   !The transfer of previously read information to the rest of the program
   CALL Set_op(Op,Basis,Molec) ! to be change
+  !Stop 'Robert set_op'
   !Test smolyak!!!!!
 
 

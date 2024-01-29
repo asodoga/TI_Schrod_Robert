@@ -12,7 +12,7 @@ FC=gfortran
 #FFLAGS=-fopenmp
 #FFLAGS=-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
 #FFLAGS=-O0 -g -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
-FFLAGS= -g -J obj -I$(PotRDIR) -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
+FFLAGS= -O0 -g -J obj -I$(PotRDIR) -fbacktrace -fcheck=all -fwhole-file -fcheck=pointer -Wuninitialized -fopenmp
 #FFLAGS=-O5 -g -fbacktrace -funroll-loops -ftree-vectorize -falign-loops=16 -fopenmp
 OBJ_DIR=obj
 MOD_DIR=obj
