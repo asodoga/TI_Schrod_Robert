@@ -176,8 +176,8 @@ CONTAINS
       CALL OpPsi_basis_DP(OpPsi_B,Psi_B,Op)
      CASE ('smolyak')
       CALL OpPsi_basis_Smol(OpPsi_B,Psi_B,Op)
-       write(out_unitp,*)'veriok'
-       write(out_unitp,*) OpPsi_B(:)
+       !write(out_unitp,*)'veriok'
+       !write(out_unitp,*) OpPsi_B(:)
      CASE default
       STOP 'ERROR in Read_Basis: no default basis.'
     END SELECT
@@ -201,6 +201,44 @@ CONTAINS
     Deallocate(Psi_B)
 
   END SUBROUTINE Make_mat
+
+  SUBROUTINE  Local_F2_F1_simple(F2,F1,Ndim,Q)
+  USE NumParameters_m
+  USE UtilLib_m
+   IMPLICIT NONE
+   Integer, intent(in)           :: Ndim
+   Real (kind=Rk), intent(in)    :: Q(:)
+   Real (kind=Rk), intent(inout) :: F1(:)
+   Real (kind=Rk), intent(inout) :: F2(:,:)
+
+   !Logical,          parameter   :: debug = .true.
+   Logical,         parameter   :: debug = .false.
+   Integer                       :: i,j
+
+   IF (debug) THEN
+    Write(out_unitp,*) 'BEGINNING Local_F2_F1_simple'
+    flush(out_unitp)
+   END IF
+
+
+    F2 = Zero
+    F1 = Zero
+
+    DO i=1,Ndim
+      F2(i,i) = - HALF
+    END DO
+
+
+    IF (debug) THEN
+      Do i=1,Ndim
+       Write(out_unitp,*)'F2',F2(i,i)
+        Write(out_unitp,*)'F1',F1(i)
+      END DO
+
+     Write(out_unitp,*) 'END Local_F2_F1_simple'
+     flush(out_unitp)
+    END IF
+  END SUBROUTINE Local_F2_F1_simple
 
   SUBROUTINE  Local_F2_F1_old(F2,F1,R,m1,m2,Ndim,Q)
   USE NumParameters_m
@@ -306,7 +344,7 @@ CONTAINS
     !Logical,          parameter         :: debug = .true.
     Logical,         parameter          :: debug = .false.
     Integer                             :: ib,iq
-    Logical                             :: Simple = .false.
+    !Logical                             :: Simple = .true.
 
     IF (debug) THEN
      Write(out_unitp,*) 'BEGINNING Set_Op'
@@ -314,28 +352,16 @@ CONTAINS
      flush(out_unitp)
     END IF
 
-    IF (Simple) THEN
-     Op%Basis => Basis  !Initialization of Op%Basis by the values ​​of Basis
-     Op%Molec => Molec
-
-     Allocate(Op%Grid(3))
-     Allocate(Op%Grid(1)%Vec(Op%Basis%nq))
-     Allocate(Op%Grid(2)%Vec(Op%Basis%nq))
-     Allocate(Op%Grid(3)%Vec(Op%Basis%nq))
-
-     Op%Grid(1)%DerivIndex(1) = 1
-     Op%Grid(1)%DerivIndex(2) = 1
-     Op%Grid(2)%DerivIndex(1) = 2
-     Op%Grid(2)%DerivIndex(2) = 2
-     Op%Grid(3)%DerivIndex(1) = 3
-     Op%Grid(3)%DerivIndex(2) = 3
-
-     Op%Grid(1)%Vec(:) = -HALF/mass
-     Op%Grid(2)%Vec(:) = -HALF/mass
-     Op%Grid(3)%Vec(:) = -HALF/mass
-    ELSE
-     Call Set_grid_Op(Op,Basis,Molec)
-    END IF
+    SELECT CASE (Molec%Model_type)
+    CASE('LOCAL')
+     Call Set_grid_op_simple(Op,Basis,Molec)
+    CASE('QML')
+     Call Set_grid_Op_QML(Op,Basis,Molec)
+    CASE('RPotlib')
+     Call Set_grid_op_RPOT(Op,Basis,Molec)
+    CASE DEFAULT
+      STOP 'Model_type is bad in Set_Op'
+    END SELECT
 
     IF (debug) THEN
      Write(out_unitp,*) 'END Set_Op'
@@ -343,7 +369,231 @@ CONTAINS
     END IF
   END SUBROUTINE Set_Op
 
-  SUBROUTINE Set_grid_Op(Op,Basis,Molec)
+  SUBROUTINE  Set_grid_op_simple(Op,Basis,Molec)
+   USE Basis_m
+   USE NDindex_m
+
+    IMPLICIT  NONE
+    TYPE(Op_t),     intent(inout)       :: Op
+    TYPE (Basis_t), intent(in),  target :: Basis
+    TYPE (Molec_t), intent(in),  target :: Molec
+    Real(kind=Rk)                       :: F,Vep,V
+    Real(kind=Rk), allocatable          :: Q(:),F2(:,:),F1(:)
+    !Logical,         parameter         :: debug = .true.
+    Logical, parameter                  :: debug = .false.
+    Logical                             :: Endloop_q
+    Logical                             :: Endloop_b
+    Integer, allocatable                :: tab_iq(:)
+    Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm
+    Integer                             :: inq1,inq2,I_smol,ic
+
+    IF (debug) THEN
+     Write(out_unitp,*) 'BEGINNING  Set_grid_op_simple'
+     Call Write_basis(Basis)
+     flush(out_unitp)
+    END IF
+
+    SELECT CASE (Basis%Basis_name)
+     CASE ('dp')
+        Op%Basis => Basis  !Initialization of Op%Basis by the values ​​of Basis
+        Op%Molec => Molec
+        Allocate(Q(Op%Basis%Ndim))
+        Allocate(F1(Op%Basis%Ndim))
+        Allocate(F2(Op%Basis%Ndim,Op%Basis%Ndim))
+        Nterm  =  (Op%Basis%Ndim + 2)*(Op%Basis%Ndim + 1)/2
+        Allocate(Op%Grid(Nterm))
+
+        DO iterm = 1,size(Op%Grid)
+          Allocate(Op%Grid(iterm)%Vec(Op%Basis%nq))
+        END DO
+
+        iterm = 1
+        Op%Grid(iterm)%DerivIndex(:)  = [0,0]
+        DO i2 = 1,Op%Basis%Ndim !size(Op%Basis%tab_basis)
+        DO i1 = i2,Op%Basis%Ndim !size(Op%Basis%tab_basis)
+         iterm = iterm + 1
+         Op%Grid(iterm)%DerivIndex(:)  = [i2,i1]
+        END DO
+        END DO
+
+        DO i1=1,Op%Basis%Ndim
+         iterm = iterm+1
+         Op%Grid(iterm)%DerivIndex(:)  = [i1,0]
+
+        END DO
+
+        Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
+        Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+
+        Iq=0
+        DO
+         Iq=Iq+1
+         Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+         IF (Endloop_q) exit
+         ic=0
+         DO ib = 1,size(Op%Basis%tab_basis)
+           ic=ic+1
+           IF(Op%Basis%tab_basis(ib)%ndim==2)THEN
+            Q(ic:ic+1) =  Op%Basis%tab_basis(ib)%x(tab_iq(ib),:)
+            ic=ic+1
+           ELSE
+             Q(ic) =  Op%Basis%tab_basis(ib)%x(tab_iq(ib),1)
+           END IF
+         END DO
+
+         Call Local_F2_F1_simple(F2,F1,Op%Basis%Ndim,Q)
+         Call Calc_potsub(V,Q,Op%Molec)
+
+         DO iterm = 1,size(Op%Grid)
+          inq1  = Op%Grid(iterm)%DerivIndex(1)
+          inq2  = Op%Grid(iterm)%DerivIndex(2)
+          IF (inq1 > 0 .and. inq2 > 0 )THEN
+           Op%Grid(iterm)%Vec(Iq)  =  F2(inq1,inq2)
+          ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
+            Op%Grid(iterm)%Vec(Iq)  =  F1(inq1)
+          ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
+            Op%Grid(iterm)%Vec(Iq)     =   V!+Vep
+          END IF
+         END DO
+        END DO
+        Deallocate(Tab_iq)
+      CASE ('smolyak')
+
+        Op%Molec => Molec
+        Op%Basis => Basis
+        Allocate(Op%Op_smol(Basis%NDindexl%Nterm))
+
+        DO I_smol=1, Basis%NDindexl%Nterm
+          Op%Op_Smol(I_smol)%Basis => Basis%Tab_Smolyak(I_smol)
+          CALL  Set_grid_op_simple(Op%Op_Smol(I_smol),Basis%Tab_Smolyak(I_smol),Op%Molec)
+        END DO
+
+      CASE default
+         STOP 'SSERROR in Read_Basis: no default basis.'
+    END SELECT
+
+    IF (debug) THEN
+      Write(out_unitp,*) 'END  Set_grid_op_simple'
+      flush(out_unitp)
+    END IF
+  END SUBROUTINE Set_grid_op_simple
+
+  SUBROUTINE  Set_grid_op_RPOT(Op,Basis,Molec)
+    USE Basis_m
+    USE NDindex_m
+
+    IMPLICIT  NONE
+    TYPE(Op_t),     intent(inout)       :: Op
+    TYPE (Basis_t), intent(in),  target :: Basis
+    TYPE (Molec_t), intent(in),  target :: Molec
+    Real(kind=Rk)                       :: F,Vep,V
+    Real(kind=Rk), allocatable          :: Q(:),F2(:,:),F1(:)
+    !Logical,         parameter         :: debug = .true.
+    Logical, parameter                  :: debug = .false.
+    Logical                             :: Endloop_q
+    Logical                             :: Endloop_b
+    Integer, allocatable                :: tab_iq(:)
+    Integer                             :: ib,iq,i1,i2,inb,iterm,Nterm
+    Integer                             :: inq1,inq2,I_smol,ic
+
+    IF (debug) THEN
+     Write(out_unitp,*) 'BEGINNING  Set_grid_op_RPOT'
+     Call Write_basis(Basis)
+     flush(out_unitp)
+    END IF
+
+    SELECT CASE (Basis%Basis_name)
+     CASE ('dp')
+      Op%Basis => Basis  !Initialization of Op%Basis by the values ​​of Basis
+      Op%Molec => Molec
+      Allocate(Q(Op%Basis%Ndim))
+      Allocate(F1(Op%Basis%Ndim))
+      Allocate(F2(Op%Basis%Ndim,Op%Basis%Ndim))
+      Nterm  =  (Op%Basis%Ndim + 2)*(Op%Basis%Ndim + 1)/2
+      Allocate(Op%Grid(Nterm))
+
+      DO iterm = 1,size(Op%Grid)
+        Allocate(Op%Grid(iterm)%Vec(Op%Basis%nq))
+      END DO
+
+      iterm = 1
+      Op%Grid(iterm)%DerivIndex(:)  = [0,0]
+      DO i2 = 1,Op%Basis%Ndim !size(Op%Basis%tab_basis)
+      DO i1 = i2,Op%Basis%Ndim !size(Op%Basis%tab_basis)
+       iterm = iterm + 1
+       Op%Grid(iterm)%DerivIndex(:)  = [i2,i1]
+      END DO
+      END DO
+
+      DO i1=1,Op%Basis%Ndim
+       iterm = iterm+1
+       Op%Grid(iterm)%DerivIndex(:)  = [i1,0]
+
+      END DO
+
+      Allocate(Tab_iq(size(Op%Basis%tab_basis)))
+
+      Call Init_tab_ind(Tab_iq,Op%Basis%NDindexq)
+
+      Iq=0
+      DO
+       Iq=Iq+1
+       Call increase_NDindex(Tab_iq,Op%Basis%NDindexq,Endloop_q)
+       IF (Endloop_q) exit
+       ic=0
+       DO ib = 1,size(Op%Basis%tab_basis)
+         ic=ic+1
+
+         IF(Op%Basis%tab_basis(ib)%ndim==2)THEN
+          Q(ic:ic+1) =  Op%Basis%tab_basis(ib)%x(tab_iq(ib),:)
+          ic=ic+1
+         ELSE
+           Q(ic) =  Op%Basis%tab_basis(ib)%x(tab_iq(ib),1)
+         END IF
+       END DO
+         Call Local_F2_F1_old(F2,F1,One,one,one,Op%Basis%Ndim,Q)
+
+
+         Call Calc_potsub(V,Q,Op%Molec)
+
+         DO iterm = 1,size(Op%Grid)
+           inq1  = Op%Grid(iterm)%DerivIndex(1)
+           inq2  = Op%Grid(iterm)%DerivIndex(2)
+          IF (inq1 > 0 .and. inq2 > 0 )THEN
+            Op%Grid(iterm)%Vec(Iq)  =  F2(inq1,inq2)
+          ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
+           Op%Grid(iterm)%Vec(Iq)  =  F1(inq1)
+          ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
+           Op%Grid(iterm)%Vec(Iq)     =   V!+Vep
+          END IF
+         END DO
+         END DO
+         Deallocate(Tab_iq)
+
+      CASE ('smolyak')
+
+        Op%Molec => Molec
+        Op%Basis => Basis
+        Allocate(Op%Op_smol(Basis%NDindexl%Nterm))
+
+        DO I_smol=1, Basis%NDindexl%Nterm
+          Op%Op_Smol(I_smol)%Basis => Basis%Tab_Smolyak(I_smol)
+          CALL  Set_grid_op_RPOT(Op%Op_Smol(I_smol),Basis%Tab_Smolyak(I_smol),Op%Molec)
+        END DO
+
+      CASE default
+         STOP 'SSERROR in Read_Basis: no default basis.'
+      END SELECT
+
+    IF (debug) THEN
+      Write(out_unitp,*) 'END  Set_grid_op_RPOT'
+      flush(out_unitp)
+    END IF
+  END SUBROUTINE Set_grid_op_RPOT
+
+
+  SUBROUTINE Set_grid_Op_QML(Op,Basis,Molec)
      USE Basis_m
      USE NDindex_m
 
@@ -362,7 +612,7 @@ CONTAINS
       Integer                             :: inq1,inq2,I_smol,ic
 
       IF (debug) THEN
-       Write(out_unitp,*) 'BEGINNING Set_grid_Op'
+       Write(out_unitp,*) 'BEGINNINGSet_grid_Op_QML'
        Call Write_basis(Basis)
        flush(out_unitp)
       END IF
@@ -417,7 +667,7 @@ CONTAINS
        END DO
 
          Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
-         !Call Local_F2_F1(F2,F1,R,m1,m2,Ndim,Q)
+
          Call Calc_potsub(V,Q,Op%Molec)
          DO iterm = 1,size(Op%Grid)
            inq1  = Op%Grid(iterm)%DerivIndex(1)
@@ -441,7 +691,7 @@ CONTAINS
 
         DO I_smol=1, Basis%NDindexl%Nterm
           Op%Op_Smol(I_smol)%Basis => Basis%Tab_Smolyak(I_smol)
-          CALL Set_Grid_Op(Op%Op_Smol(I_smol),Basis%Tab_Smolyak(I_smol),Op%Molec)
+          CALL Set_Grid_Op_QML(Op%Op_Smol(I_smol),Basis%Tab_Smolyak(I_smol),Op%Molec)
         END DO
 
        CASE default
@@ -449,10 +699,10 @@ CONTAINS
       END SELECT
 
       IF (debug) THEN
-        Write(out_unitp,*) 'END Set_drid_Op'
+        Write(out_unitp,*) 'END Set_grid_Op_QML'
         flush(out_unitp)
       END IF
-   END SUBROUTINE Set_grid_op
+   END SUBROUTINE Set_grid_Op_QML
 
   SUBROUTINE Diago_Op(Op)
    USE Molec_m

@@ -1,0 +1,7 @@
+&pot coord_type='CURV' sym_type='SYM' Model_type='RPotlib' V0 = 0/
+&basis_nD name='smolyak' nb_basis=5 LB=5  /
+&basis_nD name='herm' A_smol=1 B_smol=2    SCALEQ=  1  Q0=1/
+&basis_nD name='herm' A_smol=1 B_smol=2    SCALEQ=  1  Q0=1/
+&basis_nD name='herm' A_smol=1 B_smol=2    SCALEQ=  1  Q0=1/
+&basis_nD name='herm' A_smol=1 B_smol=2    SCALEQ=  1  Q0=1/
+&basis_nD name='herm' A_smol=1 B_smol=2    SCALEQ=  1  Q0=1/

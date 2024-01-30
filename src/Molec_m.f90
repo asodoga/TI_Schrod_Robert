@@ -83,7 +83,7 @@ module Molec_m
 
     NAMELIST /pot/ coord_type,sym_type,Model_type,V0,ndim
 
-    Model_type    = 'local'
+    Model_type    = 'LOCAL'
     coord_type    = 'simple'
     sym_type      = 'sym'
     V0            = Zero
@@ -97,8 +97,11 @@ module Molec_m
     END IF
 
     Read(ni,nml=pot,IOSTAT=err_io)
+
+
     SELECT CASE (Model_type)
     CASE('QML')
+
       ndimQ     = 0 !H2cl+
       !ndimQ     = 5
     !  nsurf     = 1
@@ -125,9 +128,9 @@ module Molec_m
 
       SELECT CASE (sym_type)
       CASE ('ANTISYM')
-       Q0(3)=QML0(1)
-       Q0(1)=QML0(2)
-       Q0(2)=QML0(2)
+       Q0(3) = QML0(1)
+       Q0(1) = QML0(2)
+       Q0(2) = QML0(2)
 
        Call Tana_F2_F1_Vep(F2,F1,Vep,Q0)
 
@@ -178,7 +181,7 @@ module Molec_m
     CASE('LOCAL')
       Molec%ndim  =  ndim
     CASE DEFAULT
-      STOP 'Model_type is bad'
+      STOP 'Model_type is bad in Read_Molec'
     END SELECT
 
     Molec%V0         = V0
@@ -235,12 +238,13 @@ module Molec_m
        END DO
 
       CASE DEFAULT
-        STOP 'sym_type is bad'
+        STOP 'sym_type is bad '
       END SELECT
       Call sub_Qmodel_V(Mat_V,QQML)
       Calc_pot = Mat_V(1,1)
       Deallocate(Mat_V)
       Deallocate(QQML)
+      write(*,*) 'Calc_pot=',Calc_pot
     CASE('RPotlib')
     !  write(*,*) 'size(Q)=',size(Q2)
       !Q2(:) = one
@@ -248,13 +252,12 @@ module Molec_m
       !Write(*,*) 'Calc_pot=',Calc_pot
     !  write(*,*) 'size(Q)=',size(Q2)
       !Stop 'Robert'
-    CASE ('Local')
+    CASE ('LOCAL')
+    !  Stop 'Robert'
       Calc_pot = HALF * dot_product( Q,Q)! 0.5*x^2
-      !Calc_pot =  dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! x^2+x^4
-      !Calc_pot =  -TEN * dot_product( Q,Q) + dot_product( Q,Q) *dot_product( Q,Q)! -10x^2+x^4
-      !Calc_pot = HALF * dot_product( Q,Q)
-      !Calc_pot = De*dot_product((1-exp(-alpha1*(Q-Re))),(1-exp(-alpha1*(Q-Re))))
-      !Calc_pot = De*(1-exp(-alpha1*(Q(1)-Re)))**2
+      !write(*,*) 'Calc_pot=',Calc_pot
+    CASE DEFAULT
+      STOP 'Model_type is bad in Calc_potsub'
     END SELECT
 !!!!!!!Calcul du potentiel!!!!
   IF (Pot_calc) THEN
@@ -293,16 +296,15 @@ module Molec_m
     Deallocate(QQML)
   END IF
 
-    !Deallocate(Mat_V)
-    !Deallocate(QQML)
-    IF (debug) THEN
-      write(out_unitp,*)
-      write(out_unitp,*) Calc_pot
-      write(out_unitp,*) 'END Calc_potsub'
-      flush(out_unitp)
-    END IF
+
+  IF (debug) THEN
+    write(out_unitp,*)
+    write(out_unitp,*) Calc_pot
+    write(out_unitp,*) 'END Calc_potsub'
+    flush(out_unitp)
+  END IF
 
  END SUBROUTINE Calc_potsub
 
 
-End module Molec_m
+END MODULE  Molec_m

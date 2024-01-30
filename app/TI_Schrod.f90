@@ -45,26 +45,7 @@ PROGRAM TI_Schrod
   TYPE (Molec_t)              :: Molec
   Real(kind=Rk), allocatable          :: Q(:),F2(:,:),F1(:)
   !!!!!!!!!!!!!!!!!test!!!!potlib!!!!!!!!!!!!!!!!!!!!!!!!!
-  !TYPE(Para_CO_nWater_t):: Para_CO_nWater
-    ! TYPE(Cage_mole_t)     :: Cage_mole
-     !Real(kind=Rk)         :: Q2(5),V
-     !Real(kind=Rk)         :: R
 
-    !  Q2(:) = one
-
-      !Call Set_para(Para_CO_nWater)
-      !Call Read_Cage(Cage_mole,Para_CO_nWater)
-
-    !  Call Pot_CO_Cage( V,Para_CO_nWater,Cage_mole,Q2)
-!Write(*,*) V
-!Stop 'Robert'
- ! Allocate(Q(2),F2(2,2),F1(2))
-  ! Q(:) = [One,Two,Three,SIX ,Five]
-! test sur koe
-  !Call Local_F2_F1(F2,F1,R,m1,m2,Ndim,Q)
-  !Call Local_F2_F1(F2,F1,Two,One,one,5,Q)
-  !Call Local_F2_F1_old(F2,F1,Two,SIX ,Three,5,Q)
-  !Stop 'Robert'
   !====================================================================================
   !Allows you to read the information on the library used or not and the information
   !on the potential V of the systems being studied
@@ -77,9 +58,7 @@ PROGRAM TI_Schrod
 
   !CALL Read_Basis_old1(Basis,nio=in_unitp)
   Call Read_Construct_Basis(Basis,nio=in_unitp)
-  !Call Write_Basis(Basis)
-  !Write(*,*) 'arrivé'
-  !STOP 'Robert_construct'
+  
   !!====================================================================================
   !The transfer of previously read information to the rest of the program
   CALL Set_op(Op,Basis,Molec) ! to be change
