@@ -102,7 +102,7 @@ module Molec_m
     SELECT CASE (Model_type)
     CASE('QML')
 
-      ndimQ     = 0 !H2cl+
+      ndimQ     = 3 !H2cl+
       !ndimQ     = 5
     !  nsurf     = 1
       nsurf     = 0 ! H2cl+

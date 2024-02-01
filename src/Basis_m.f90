@@ -457,7 +457,7 @@ CONTAINS
         END DO
 
         Call  Mapping_2G (Basis )
-        CALL test_smolyak(Basis)
+        !CALL test_smolyak(Basis)
       CASE default
         STOP 'ERROR in Read_Basis: no default basis.'
       END SELECT
@@ -577,6 +577,51 @@ CONTAINS
 
   END SUBROUTINE Construct_basis_new
 
+  SUBROUTINE Mappe_test (Basis,Basis_2,l)
+    TYPE(Basis_t),  intent(in)          :: Basis_2(2)
+    TYPE(Basis_t),  intent(inout)       :: Basis
+    Integer                             :: ib,iq,nb1,nb2
+    Integer , intent(in)                :: l
+    Integer                             :: ib1,ib2,iq1,iq2,il
+    !Logical,         parameter         :: debug = .true.
+    Logical, parameter                  :: debug = .false.
+
+    IF (debug) THEN
+     Write(out_unitp,*) 'Begining Mappe_test'
+     Call write_basis(Basis)
+     flush(out_unitp)
+    END IF
+
+
+    Ib=0
+    !DO il= 0,l
+
+    ! IF (il==0) THEN
+    !   nb2=Calc_n_smol(Basis%A_smol,Basis%B_smol,il)
+    !   nb1= Calc_n_smol(Basis%A_smol,Basis%B_smol,il)
+    ! ELSE
+    !   nb2=Calc_n_smol(Basis%A_smol,Basis%B_smol,il)
+    !   nb1= Calc_n_smol(Basis%A_smol,Basis%B_smol,il-1)
+     !END IF
+
+     DO Ib2=1,Basis_2(2)%nb
+     DO Ib1=1,Basis_2(1)%nb
+       Ib=Ib+1
+
+       Write(out_unitp,*) 'les indices', Ib,Ib1,Ib2
+
+     END DO
+     END DO
+  !  END DO
+
+    IF (debug) THEN
+     Call write_basis(Basis)
+     Write(out_unitp,*) 'END Mappe_test'
+     flush(out_unitp)
+    END IF
+  END SUBROUTINE Mappe_test
+
+
   SUBROUTINE Construct_Basis_2B(Basis,l) ! 2basis
    USE UtilLib_m
    IMPLICIT NONE
@@ -623,6 +668,7 @@ CONTAINS
 
      END DO
 
+     Call  Mappe_test (Basis,Basis_2,l)
 
      Allocate(Basis%W(nq))
      Allocate(Basis%x(nq,2))
@@ -630,15 +676,16 @@ CONTAINS
      Allocate(Basis%d1gb(nq,nb,2))
      Allocate(Basis%d2gb(nq,nb,2,2))
 
-     ib1=1
-     ib2=0
+     ib2=1
+     ib1=0
      DO Ib=1,nb
-       IF (ib2 == Basis_2(2)%nb) THEN
-         ib1 = ib1 + 1
-         ib2 = 1
-       ELSE
+       IF (ib1 == Basis_2(2)%nb) THEN
          ib2 = ib2 + 1
+         ib1 = 1
+       ELSE
+         ib1 = ib1 + 1
        END IF
+       Write(out_unitp,*) 'les indices dans basis_2D', ib, ib1,ib2
          iq1=1
          iq2=0
          DO Iq=1,nq
@@ -1083,14 +1130,14 @@ CONTAINS
   !  write(out_unitp,*) 'Sii,Sij',Sii,Sij
 
     IF (nderiv > 0) THEN
-      write(out_unitp,*)
+    !  write(out_unitp,*)
       S = matmul(d0bgw,Basis%d1gb(:,:,1))
       !Call Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>',Rformat='e13.4')
     !  Call Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')
     END IF
 
     IF (nderiv > 1) THEN
-      write(out_unitp,*)
+    !  write(out_unitp,*)
       S = matmul(d0bgw,Basis%d2gb(:,:,1,1))
       !Call Write_RMat(S,out_unitp,5,name_info='<d0b|d2b>',Rformat='e13.4')
     !  Call Write_RMat(S,out_unitp,5,name_info='<d0b|d1b>')

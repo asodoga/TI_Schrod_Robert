@@ -1,0 +1,5 @@
+&pot coord_type='CURV' sym_type='SYM' Model_type='LOCAL' V0=0  /
+&basis_nD name='Dp' nb_basis=3 ndim=3  /
+&basis_nD name='herm'   nb=4 nq=4 SCALEQ=1  Q0=0.01  /
+&basis_nD name='herm'   nb=4 nq=4 SCALEQ=1  Q0=0.01   /
+&basis_nD name='herm'   nb=4 nq=4 SCALEQ=1  Q0=0.01/

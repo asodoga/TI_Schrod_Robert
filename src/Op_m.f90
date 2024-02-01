@@ -665,8 +665,8 @@ CONTAINS
            Q(ic) =  Op%Basis%tab_basis(ib)%x(tab_iq(ib),1)
          END IF
        END DO
-
-         Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
+         Call Local_F2_F1_simple(F2,F1,Op%Basis%Ndim,Q)
+        ! Call Tana_F2_F1_Vep(F2,F1,Vep,Q)
 
          Call Calc_potsub(V,Q,Op%Molec)
          DO iterm = 1,size(Op%Grid)
@@ -677,7 +677,7 @@ CONTAINS
           ELSE IF (inq1 > 0 .and. inq2 == 0) THEN
            Op%Grid(iterm)%Vec(Iq)  =  F1(inq1)
           ELSE IF (inq1 == 0 .and. inq2 == 0) THEN
-           Op%Grid(iterm)%Vec(Iq)     =   V+Vep
+           Op%Grid(iterm)%Vec(Iq)     =   V!+Vep
           END IF
          END DO
          END DO
